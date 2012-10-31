@@ -42,28 +42,28 @@ exports = {
 	respond: (req, res, opt = {}) ->
 		@hooks.server.respond.apply lanceExports, [req, res, opt]
 		
-		code		= opt.code		or 500
-		headers		= opt.headers	or { 'content-type': 'text/html; charset=utf-8' }
-		body		= opt.body		or ''
-		encoding	= opt.encoding	or 'utf8'
+		opt.encoding	= opt.encoding	or 'utf8'
+		opt.code		= opt.code		or 500
+		opt.headers		= opt.headers	or { 'content-type': 'text/html; charset=utf-8' }
+		opt.body		= opt.body		or ''
 		
-		setHeaders res, headers # set headers, as we're not using writeHead()
+		setHeaders res, opt.headers # set headers, as we're not using writeHead()
 		
-		res.statusCode = code
+		res.statusCode = opt.code
 		
-		finalize req, res, body, (body) ->
+		finalize req, res, opt.body, (body) ->
 			res.end body, encoding
-			
+		
 	serve: (req, res, opt = {}) ->
 		@hooks.server.serve.apply lanceExports, [opt]
 
 		if typeof opt is 'string'
 			opt = { view: opt }
 			
+		opt.code	= opt.code		or 200
+		opt.headers	= opt.headers	or { 'content-type': 'text/html; charset=utf-8' }
 		opt.body	= opt.body		or ''
 		opt.data	= opt.data		or {}
-		opt.headers	= opt.headers	or { 'content-type': 'text/html; charset=utf-8' }
-		opt.code	= opt.code		or 200
 		opt.view	= opt.view		or opt.template or '' # lets one choose the words template or view
 
 		{templating} = lanceExports
