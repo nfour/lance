@@ -1,5 +1,4 @@
-
-path		= require 'path'
+path = require 'path'
 
 require './functions' # exends natives, making functions avaliable
 
@@ -28,21 +27,19 @@ lance = {
 }
 
 # the exposed, public object for user interaction 
-# ---
-# starts with minimal properties for simplicity
-# requirer is exposed so that it may be used to retrieve
-# lance's config if that's the case.
+# starts with minimal properties
+# requirer is exposed so that it may be used immediately
 lanceExports = {
 	requirer: requirer
 
 	init: (newCfg = {}) ->
-		this.lance		= lance					# add to the exports for the rest of the project to access
+		this.lance		= lance # add to the exports for the rest of the project to access
 		this.session	= lance.session
 
 		lance.project	= project
 		lance.root		= process.env.startdir
 
-		project			= project._unwrap()		# initializes the project
+		project			= project._unwrap() # initializes the project
 
 		lance.cfg		= merge clone( project.cfg.lance ), newCfg
 
