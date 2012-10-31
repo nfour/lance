@@ -8,6 +8,7 @@ module.exports = {
 
 		template: {
 			ext		: '.~~~'
+			findIn	: ''
 			engine	: undefined
 			options	: {}
 		}
