@@ -35,7 +35,7 @@ templating = {
 	# functions
 
 	resolveDir: (dir, root = '') ->
-		return if Function.isAbsolute dir then dir else path.join root or cfg.root, dir
+		return if Function.isAbsolute( dir ) then dir else path.join root or cfg.root, dir
 
 	# initialization
 
@@ -73,7 +73,7 @@ templating = {
 
 			ect.engine = ect.engine ect.options
 
-		ect.ext			= ect.ext or ect.options.ext
+		ect.ext	= ect.ext or ect.options.ext
 
 		# watch
 
@@ -259,7 +259,7 @@ templating = {
 				arg = [arg]
 
 			done	= []
-			
+
 			for dir in arg
 				dir = @resolveDir dir
 
@@ -276,6 +276,7 @@ templating = {
 						@renderCoffee fileDir
 
 					if isExt ext, template.ext
+						@templates.files[fileDir] = file
 						@compileTemplate fileDir
 
 		return true
@@ -288,6 +289,7 @@ lance.templating = templating
 
 lanceExports.templating = {
 	cfg				: templating.cfg
+	locals			: {}
 	init			: -> templating.init.apply templating, arguments
 
 	render			: -> templating.renderEct.apply templating, arguments
@@ -298,11 +300,4 @@ lanceExports.templating = {
 
 	build			: -> templating.build.apply templating, arguments
 	watch			: -> templating.watch.apply templating, arguments
-
 }
-
-
-# loadDir function for templates... perhaps leave till everything is working
-# need way to force loading via dir, incase watch fails.
-# handle default config
-# perhaps drop requirer functionality for lance, only for project scope

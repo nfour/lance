@@ -56,26 +56,23 @@ exports = {
 			
 	serve: (req, res, opt = {}) ->
 		@hooks.server.serve.apply lanceExports, [opt]
-		
-		opt = { view: opt } if typeof opt is 'string'
-			
-		defaultOpt = {
-			view	: ''
-			template: ''
-			headers	: { 'content-type': 'text/html; charset=utf-8' }
-			code	: 200
-			data	: {}
-			body	: ''
-		}
-		
-		opt = merge defaultOpt, opt
-		
-		opt.view = opt.view or opt.template # lets one choose the words template or view
 
-		opt.data.cache = true
+		if typeof opt is 'string'
+			opt = { view: opt }
+			
+		opt.body	= opt.body		or ''
+		opt.data	= opt.data		or {}
+		opt.headers	= opt.headers	or { 'content-type': 'text/html; charset=utf-8' }
+		opt.code	= opt.code		or 200
+		opt.view	= opt.view		or opt.template or '' # lets one choose the words template or view
+
+		{templating} = lanceExports
+
+		if templating.locals
+			merge opt.data, templating.locals
 
 		if not opt.body and opt.view
-			lanceExports.templating.render opt.view, opt.data, (err, rendered) =>
+			templating.render opt.view, opt.data, (err, rendered) =>
 				if err
 					console.error lance.error 'Error', 'templating renderEct', err
 					rendered = ''

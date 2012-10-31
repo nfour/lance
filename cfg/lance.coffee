@@ -13,7 +13,7 @@ module.exports = {
 		}
 
 		ect: {
-			engine	: false
+			engine	: undefined
 			ext		: '.ect'
 			findIn	: ''
 
