@@ -52,7 +52,7 @@ exports = {
 		res.statusCode = opt.code
 		
 		finalize req, res, opt.body, (body) ->
-			res.end body, encoding
+			res.end body, opt.encoding
 		
 	serve: (req, res, opt = {}) ->
 		@hooks.server.serve.apply lanceExports, [opt]
@@ -68,8 +68,7 @@ exports = {
 
 		{templating} = lanceExports
 
-		if templating.locals
-			merge opt.data, templating.locals
+		if templating.locals then merge opt.data, templating.locals
 
 		if not opt.body and opt.view
 			templating.render opt.view, opt.data, (err, rendered) =>

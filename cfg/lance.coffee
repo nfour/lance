@@ -11,12 +11,23 @@ module.exports = {
 			findIn	: ''
 			engine	: undefined
 			options	: {}
+			minify	: true
+		}
+
+		toffee: {
+			engine	: undefined
+			ext		: '.toffee'
+			findIn	: ''
+			minify	: false
+
+			options: {}
 		}
 
 		ect: {
 			engine	: undefined
 			ext		: '.ect'
 			findIn	: ''
+			minify	: true
 
 			options: {
 				root	: ''
@@ -34,6 +45,7 @@ module.exports = {
 			renderTo: 'static'
 			findIn	: ''
 			options	: {}
+			minify	: true
 		}
 		
 		coffee: {
@@ -42,6 +54,7 @@ module.exports = {
 			renderTo: 'static'
 			findIn	: ''
 			options	: {}
+			minify	: true
 		}
 	}
 

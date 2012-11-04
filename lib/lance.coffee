@@ -1,8 +1,16 @@
+###
+     __                     
+    / /___  ____  ____ ___  
+   / / __ `/ __ \/ ___/ _ \ 
+  / / /_/ / / / / /__/  __/ 
+ /_/\__/_/_/ /_/\___/\__/   
+                            
+###
+
 path = require 'path'
 
 require './functions' # exends natives, making functions avaliable
 
-# aliases
 {clone, merge}	= Object
 {requirer}		= Function
 
@@ -35,13 +43,18 @@ lanceExports = {
 	init: (newCfg = {}) ->
 		this.lance		= lance # add to the exports for the rest of the project to access
 		this.session	= lance.session
+		this.error		= lance.error
 
 		lance.project	= project
-		lance.root		= process.env.startdir
-
 		project			= project._unwrap() # initializes the project
 
 		lance.cfg		= merge clone( project.cfg.lance ), newCfg
+
+		this.rootDir	=
+		lance.rootDir	= lance.cfg.root or path.dirname require.main.filename
+
+		this.lanceDir	=
+		lance.lanceDir	= lanceDir
 
 		lance.templating.init lance.cfg.templating or {}
 		

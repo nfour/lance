@@ -6,6 +6,7 @@ require './functions'
 require './hooks'
 
 {clone, merge}	= Object
+{type, isAbsolute, changeExt, isExt} = Function
 
 lanceExports	= require 'lance'
 lance			= lanceExports.lance
@@ -14,6 +15,7 @@ template	=
 ect			=
 coffee		=
 stylus		=
+toffee		=
 cfg			= {}
 
 templating = {
@@ -35,12 +37,12 @@ templating = {
 	# functions
 
 	resolveDir: (dir, root = '') ->
-		return if Function.isAbsolute( dir ) then dir else path.join root or cfg.root, dir
+		return if isAbsolute( dir ) then dir else path.join root or cfg.root, dir
 
 	# initialization
 
 	init: (root, newCfg = {}) ->
-		if Function.type( arguments[0] ) is 'object'
+		if type( arguments[0] ) is 'object'
 			newCfg	= arguments[0]
 			root	= ''
 
@@ -50,32 +52,44 @@ templating = {
 
 		merge cfg, newCfg # max depth of 2, for objects
 
-		cfg.root = cfg.root or root or process.env.startdir
+		cfg.root = root or cfg.root or lance.rootDir
 
 		stylus		= cfg.stylus
 		coffee		= cfg.coffee
 		ect			= cfg.ect
+		toffee		= cfg.toffee
 		template	= cfg.template
 		
-		stylus.engine	= stylus.engine		or require('stylus') or false
+		stylus.engine	= stylus.engine		or false
 		coffee.engine	= coffee.engine		or require 'coffee-script'
-		ect.engine		= ect.engine		or require('ect') or false
+		toffee.engine	= toffee.engine		or false
+		ect.engine		= ect.engine		or false
+		
+		try if not stylus.engine	and require.resolve 'stylus'	then stylus.engine	= require 'stylus'
+		try if not ect.engine		and require.resolve 'ect'		then ect.engine		= require 'ect'
+		try if not toffee.engine	and require.resolve 'toffee'	then toffee.engine	= require 'toffee'
 
 		# initialize ect
 
-		if Function.type( ect.engine ) is 'function'
+		if type( ect.engine ) is 'function'
 			if ect.findIn
 				ect.options.root = path.join cfg.root, ect.findIn
 			else
 				ect.options.root = ect.options.root or cfg.root
 
 			ect.options.ext	= ect.options.ext or ect.ext
+			ect.engine		= ect.engine ect.options
 
-			ect.engine = ect.engine ect.options
+		ect.ext	= ect.ext or ect.options.ext or ''
 
-		ect.ext	= ect.ext or ect.options.ext
+		# initialize toffee
 
-		# watch
+		if type( toffee.engine ) is 'function'
+			toffee.engine = new( toffee.engine toffee.options )
+
+		toffee.findIn = path.join cfg.root, toffee.findIn
+
+		# watch files and build 
 
 		@watch()
 		@build()
@@ -141,20 +155,37 @@ templating = {
 
 		return true
 
-	renderEct: (dir, locals = {}, callback) ->
-		if not ect.engine
-			return callback 'Ect is not loaded'
-		console.log dir
-		ect.engine.render dir, locals, (err, rendered) ->
-			if cfg.minify
+	renderToffee: (dir, locals = {}, callback) ->
+		if not toffee.engine then return callback 'Toffee is not loaded', null
+
+		# throw in __toffee options to specify the right dir path
+		locals.__toffee	= locals.__toffee or {}
+		if toffee.findIn then locals.__toffee.dir = locals.__toffee.dir or toffee.findIn
+
+		# make sure it has [a / the right] extension
+		if toffee.ext then dir = changeExt dir, toffee.ext
+
+		toffee.engine.render dir, locals, (err, rendered) ->
+			if toffee.minify
 				rendered = String.minify rendered
 
 			callback err, rendered
 
 		return true
 
-	renderTemplate: (fileDir, locals = {}) ->
-		return false if not template.engine
+	renderEct: (dir, locals = {}, callback) ->
+		if not ect.engine then return callback 'Ect is not loaded', null
+
+		ect.engine.render dir, locals, (err, rendered) ->
+			if ect.minify
+				rendered = String.minify rendered
+
+			callback err, rendered
+
+		return true
+
+	renderTemplate: (fileDir, locals = {}, callback) ->
+		if not template.engine then callback 'Template engine invalid', null
 
 		fileDir = @resolveDir fileDir
 
@@ -164,10 +195,10 @@ templating = {
 		compiled = @templates.compiled[fileDir]
 		rendered = compiled locals
 
-		if cfg.minify
+		if template.minify
 			rendered = String.minify rendered
 
-		return rendered
+		callback null, rendered
 
 	# compiling
 
@@ -223,7 +254,7 @@ templating = {
 		for arg in args
 			continue if not arg
 
-			if Function.type( arg ) is 'string'
+			if type( arg ) is 'string'
 				arg = [arg]
 
 			for dir in arg
@@ -255,7 +286,7 @@ templating = {
 		for arg in args
 			continue if not arg
 
-			if Function.type( arg ) is 'string'
+			if type( arg ) is 'string'
 				arg = [arg]
 
 			done	= []
@@ -290,14 +321,15 @@ lance.templating = templating
 lanceExports.templating = {
 	cfg				: templating.cfg
 	locals			: {}
-	init			: -> templating.init.apply templating, arguments
+	init			: -> templating.init.apply				templating, arguments
 
-	render			: -> templating.renderEct.apply templating, arguments
-	renderStylus	: -> templating.renderStylus.apply templating, arguments
-	renderCoffee	: -> templating.renderCoffee.apply templating, arguments
-	renderTemplate	: -> templating.render.apply templating, arguments
-	compileTemplate	: -> templating.compileTemplate.apply templating, arguments
+	render			: -> templating.renderToffee.apply		templating, arguments
+	renderEct		: -> templating.renderEct.apply			templating, arguments
+	renderStylus	: -> templating.renderStylus.apply		templating, arguments
+	renderCoffee	: -> templating.renderCoffee.apply		templating, arguments
+	renderTemplate	: -> templating.render.apply			templating, arguments
+	compileTemplate	: -> templating.compileTemplate.apply	templating, arguments
 
-	build			: -> templating.build.apply templating, arguments
-	watch			: -> templating.watch.apply templating, arguments
+	build			: -> templating.build.apply				templating, arguments
+	watch			: -> templating.watch.apply				templating, arguments
 }

@@ -78,7 +78,6 @@ requirer = {
 		exclude	= cfg.exclude.concat cfg.globalExclude
 		
 		return build dir, include, exclude, cfg.depth
-		
 
 	unwrapper: (obj, doChildren = true) ->
 		unwrap = (obj, doChildren = true) ->
@@ -118,7 +117,8 @@ exports = (dir, newCfg = {}) ->
 		newCfg	= arguments[0]
 		dir		= null
 
-	dir = process.env.startdir if ! dir
+	if not dir
+		dir = path.dirname require.main.filename
 
 	cfg = clone defaultCfg
 
