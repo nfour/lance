@@ -64,8 +64,8 @@ exports = {
 }
 
 publicExports = {
-	createServer	: -> lance.createServer.apply lance, arguments
-	listen			: -> lance.listen.apply lance, arguments
+	createServer	: -> lance.createServer.apply	lance, arguments
+	listen			: -> lance.listen.apply			lance, arguments
 }
 
 # extend lance

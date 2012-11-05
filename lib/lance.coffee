@@ -9,6 +9,7 @@
 
 path = require 'path'
 
+request = require 'request'
 require './functions' # exends natives, making functions avaliable
 
 {clone, merge}	= Object
@@ -32,6 +33,8 @@ lance = {
 			return ">> #{type}, #{scope}"
 		else if arguments.length is 1
 			return ">> #{type}"
+
+	request: request
 }
 
 # the exposed, public object for user interaction 
@@ -44,6 +47,7 @@ lanceExports = {
 		this.lance		= lance # add to the exports for the rest of the project to access
 		this.session	= lance.session
 		this.error		= lance.error
+		this.request	= lance.request
 
 		lance.project	= project
 		project			= project._unwrap() # initializes the project

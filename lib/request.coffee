@@ -51,15 +51,15 @@ exports = {
 }
 
 publicExports = {
-	get		: -> lance.request.get.apply lance.request, arguments
-	GET		: -> lance.request.get.apply lance.request, arguments
-	post	: -> lance.request.post.apply lance.request, arguments
-	POST	: -> lance.request.post.apply lance.request, arguments
+	get		: -> lance.request.get.apply	lance.request, arguments
+	GET		: -> lance.request.get.apply	lance.request, arguments
+	post	: -> lance.request.post.apply	lance.request, arguments
+	POST	: -> lance.request.post.apply	lance.request, arguments
 }
 
 # extend lance
 
-lance.request			= exports
-lanceExports.request	= publicExports
+#lance.request			= exports
+#lanceExports.request	= publicExports
 
 module.exports = exports

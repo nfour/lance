@@ -1,9 +1,9 @@
 
 # Note: This module extends its functionality to native objects; Object, String, Number etc.
 # It does NOT extend prototypes. Instead only the globals; Object, Array etc.
-fs = require 'fs'
-path = require 'path'
-requirer = require './requirer'
+fs			= require 'fs'
+path		= require 'path'
+requirer	= require './requirer'
 
 typeTable = {
 	'Boolean'	: Boolean

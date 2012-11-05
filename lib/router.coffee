@@ -176,8 +176,8 @@ exports = {
 publicExports = {
 	router: {
 		cfg			: cfg
-		add			: -> lance.router.add.apply router, arguments
-		match		: -> lance.router.match.apply router, arguments
+		add			: -> lance.router.add.apply		router, arguments
+		match		: -> lance.router.match.apply	router, arguments
 		routes		: router.routes
 		namedRoutes	: router.namedRoutes
 		indexes		: router.indexes
