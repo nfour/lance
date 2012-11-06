@@ -6,7 +6,7 @@ require './functions'
 require './hooks'
 
 {clone, merge}	= Object
-{type, isAbsolute, changeExt, isExt} = Function
+{type, isAbsolute, changeExt, isExt, exploreDir} = Function
 
 lanceExports	= require 'lance'
 lance			= lanceExports.lance
@@ -246,16 +246,14 @@ templating = {
 		@watching.templates[fileDir] = true
 
 	watch: ->
-		{exploreDir, isExt}	= Function
-
 		args	= [stylus.findIn, coffee.findIn, template.findIn]
-		done	= []
 
 		for arg in args
 			continue if not arg
 
-			if type( arg ) is 'string'
-				arg = [arg]
+			if type( arg ) is 'string' then arg = [arg]
+
+			done = []
 
 			for dir in arg
 
@@ -279,17 +277,14 @@ templating = {
 			return true
 
 	build: ->
-		{exploreDir, isExt}	= Function
-
-		args	= [stylus.findIn, coffee.findIn, template.findIn]
+		args = [stylus.findIn, coffee.findIn, template.findIn]
 
 		for arg in args
 			continue if not arg
 
-			if type( arg ) is 'string'
-				arg = [arg]
+			if type( arg ) is 'string' then arg = [arg]
 
-			done	= []
+			done = []
 
 			for dir in arg
 				dir = @resolveDir dir

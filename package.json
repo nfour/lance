@@ -5,7 +5,7 @@
 	"description"	: "A sharp Node.js web framework",
 	"main"			: "./index",
 	"dependencies"	: {
-		"request"	: "*",
+		"request"	: "*"
 	}
 	
 }
