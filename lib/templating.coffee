@@ -1,6 +1,7 @@
 
 path	= require 'path'
 fs		= require 'fs'
+cluster	= require 'cluster'
 
 require './functions'
 require './hooks'
@@ -28,6 +29,11 @@ templating = {
 		files		: {}
 	}
 
+	mergeCache: {
+		coffee: {}
+		stylus: {}
+	}
+
 	watching: {
 		templates	: {}
 		stylus		: {}
@@ -36,8 +42,7 @@ templating = {
 
 	# functions
 
-	resolveDir: (dir, root = '') ->
-		return if isAbsolute( dir ) then dir else path.join root or cfg.root, dir
+	resolveDir: (dir, root = '') -> if isAbsolute( dir ) then dir else path.join root or cfg.root, dir
 
 	# initialization
 
@@ -89,12 +94,77 @@ templating = {
 
 		toffee.findIn = path.join cfg.root, toffee.findIn
 
-		# watch files and build 
-
-		@watch()
 		@build()
+		@watch() if cluster.isMaster
 
 		return true
+
+	# merged renders
+
+	addMerged: (mergeCache, fileDir, rendered) ->
+		return false if not fileDir or not rendered
+
+		match = path.basename( fileDir ).match /^[\-_]?(\d+)[\-_]/i
+
+		return false if not match or not match[1]
+
+		if group = match[1]
+			if not ( group of mergeCache ) then mergeCache[group] = {}
+			mergeCache[group][fileDir] = rendered
+
+			return true
+
+		return false
+
+	renderMergedCoffee: ->
+		return false if Function.empty @mergeCache.coffee
+
+		console.log 'renderMergedCoffee'
+
+		for groupNum, group of @mergeCache.coffee
+			merged	= ''
+			keys	= Object.keys( group ).sort()
+
+			continue if not keys.length
+
+			for fileDir in keys
+				rendered = group[fileDir]
+
+				merged += "\n/* #{path.basename fileDir} */"
+				merged += '\n' + rendered + '\n'
+
+			renderTo	= @resolveDir coffee.renderTo
+
+			newFileDir	= path.join renderTo, "group-#{groupNum}.js"
+
+			fs.writeFile newFileDir, merged
+
+		return merged
+
+	renderMergedStylus: ->
+		return false if Function.empty @mergeCache.stylus
+
+		console.log 'renderMergedStylus'
+		
+		for groupNum, group of @mergeCache.stylus
+			merged	= ''
+			keys	= Object.keys( group ).sort()
+
+			continue if not keys.length
+
+			for fileDir in keys
+				rendered = group[fileDir]
+
+				merged += "\n/* #{path.basename fileDir} */"
+				merged += '\n' + rendered + '\n'
+
+			renderTo	= @resolveDir stylus.renderTo
+
+			newFileDir	= path.join renderTo, "group-#{groupNum}.css"
+
+			fs.writeFile newFileDir, merged
+
+		return merged
 
 	# rendering
 
@@ -113,10 +183,8 @@ templating = {
 			console.error lance.error 'Warning', 'templating renderStylus', 'File not readable'
 			return false
 
-		dirname	= path.dirname fileDir
-
 		engine = stylus.engine file
-		engine.set 'paths', [ dirname ]
+		engine.set 'paths', [ path.dirname fileDir ]
 		engine.render (err, rendered) =>
 			if err
 				console.error lance.error 'Error', 'templating renderStylus stylus.render', err
@@ -128,7 +196,12 @@ templating = {
 
 			newFileDir	= path.join renderTo, name + '.css'
 
-			fs.writeFile newFileDir, rendered
+			if stylus.minify then rendered = String.minifyCss rendered
+
+			if not ( @addMerged @mergeCache.stylus, fileDir, rendered )
+				fs.writeFile newFileDir, rendered
+			else
+				@renderMergedStylus()
 
 		return true
 
@@ -143,15 +216,19 @@ templating = {
 		if not file?
 			console.error lance.error 'Warning', 'templating renderCoffee', 'File not readable'
 
-		rendered	= coffee.engine.compile file, coffee.options
+		rendered	= coffee.engine.compile file
 
 		renderTo	= @resolveDir coffee.renderTo
 		ext			= path.extname fileDir
 		name		= path.basename fileDir, ext
-
 		newFileDir	= path.join renderTo, name + '.js'
 
-		fs.writeFile newFileDir, rendered
+		if coffee.minify then rendered = String.minifyJs rendered
+
+		if not @addMerged @mergeCache.coffee, fileDir, rendered
+			fs.writeFile newFileDir, rendered
+		else
+			@renderMergedStylus()
 
 		return true
 
@@ -166,8 +243,7 @@ templating = {
 		if toffee.ext then dir = changeExt dir, toffee.ext
 
 		toffee.engine.render dir, locals, (err, rendered) ->
-			if toffee.minify
-				rendered = String.minify rendered
+			if toffee.minify then rendered = String.minify rendered
 
 			callback err, rendered
 
@@ -177,8 +253,7 @@ templating = {
 		if not ect.engine then return callback 'Ect is not loaded', null
 
 		ect.engine.render dir, locals, (err, rendered) ->
-			if ect.minify
-				rendered = String.minify rendered
+			if ect.minify then rendered = String.minify rendered
 
 			callback err, rendered
 
@@ -195,8 +270,7 @@ templating = {
 		compiled = @templates.compiled[fileDir]
 		rendered = compiled locals
 
-		if template.minify
-			rendered = String.minify rendered
+		if template.minify then rendered = String.minify rendered
 
 		callback null, rendered
 
@@ -245,40 +319,16 @@ templating = {
 
 		@watching.templates[fileDir] = true
 
-	watch: ->
-		args	= [stylus.findIn, coffee.findIn, template.findIn]
+	# build/watch directory iteration and cumulative commands
 
-		for arg in args
-			continue if not arg
+	watch			: -> @build true, false
+	buildAndWatch	: -> @build true, true
 
-			if type( arg ) is 'string' then arg = [arg]
-
-			done = []
-
-			for dir in arg
-
-				dir = @resolveDir dir
-
-				if dir in done
-					continue
-
-				done.push dir
-
-				exploreDir dir, (file, fileDir, fileName, name, ext) =>
-					if isExt ext, stylus.ext
-						@watchStylus fileDir
-
-					if isExt ext, coffee.ext
-						@watchCoffee fileDir
-
-					if isExt ext, template.ext
-						@watchTemplates fileDir
-
-			return true
-
-	build: ->
+	build: (doWatch = false, doBuild = true) ->
 		args = [stylus.findIn, coffee.findIn, template.findIn]
 
+		if doBuild then @mergeCache = clone defaultMergeCache # cleans the mergeCache out
+
 		for arg in args
 			continue if not arg
 
@@ -296,18 +346,23 @@ templating = {
 
 				exploreDir dir, (file, fileDir, fileName, name, ext) =>
 					if isExt ext, stylus.ext
-						@renderStylus fileDir
+						@renderStylus fileDir		if doBuild
+						@watchStylus fileDir		if doWatch
 
 					if isExt ext, coffee.ext
-						@renderCoffee fileDir
+						@renderCoffee fileDir		if doBuild
+						@watchCoffee fileDir		if doWatch
 
 					if isExt ext, template.ext
 						@templates.files[fileDir] = file
-						@compileTemplate fileDir
+
+						@compileTemplate fileDir	if doBuild
+						@watchTemplates fileDir		if doWatch
 
 		return true
-
 }
+
+defaultMergeCache = clone templating.mergeCache
 
 # extend
 
@@ -318,7 +373,8 @@ lanceExports.templating = {
 	locals			: {}
 	init			: -> templating.init.apply				templating, arguments
 
-	render			: -> templating.renderToffee.apply		templating, arguments
+	render			: -> templating.renderEct.apply			templating, arguments
+	renderToffee	: -> templating.renderToffee.apply		templating, arguments
 	renderEct		: -> templating.renderEct.apply			templating, arguments
 	renderStylus	: -> templating.renderStylus.apply		templating, arguments
 	renderCoffee	: -> templating.renderCoffee.apply		templating, arguments
@@ -327,4 +383,5 @@ lanceExports.templating = {
 
 	build			: -> templating.build.apply				templating, arguments
 	watch			: -> templating.watch.apply				templating, arguments
+	mergeCache		: templating.mergeCache
 }

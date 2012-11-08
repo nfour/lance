@@ -18,7 +18,7 @@ module.exports = {
 			engine	: undefined
 			ext		: '.toffee'
 			findIn	: ''
-			minify	: false
+			minify	: true
 
 			options: {}
 		}

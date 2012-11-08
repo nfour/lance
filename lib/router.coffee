@@ -19,7 +19,7 @@ defaultResult = {
 }
 
 router = {
-	routes		: {}
+	routes		: []
 	namedRoutes	: {}
 	indexes		: {}
 	
@@ -40,8 +40,9 @@ router = {
 			keys
 		}
 		
-		@routes[pattern]				= route
-		@namedRoutes[name or pattern]	= route
+		@routes.push route
+
+		@namedRoutes[name or pattern] = route
 
 		return route
 	
@@ -51,7 +52,7 @@ router = {
 			return @indexes[urlPath]
 				
 		# process a result
-		for own key, route of @routes
+		for route in @routes
 			path	= {}
 			splats	= []
 			

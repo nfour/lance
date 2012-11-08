@@ -127,6 +127,22 @@ functions = {
 				.replace(/^\s+|\s+$/gm, '')
 				.replace(/\n/g, '')
 				.replace(/\s{2,}/g, ' ')
+
+		minifyCss: (str) ->
+			return str
+				.replace(/^\s+|\s+$/gm, '')
+				.replace(///
+						\n
+					|	\s+(?=\{)
+					|	\;\s*(?=\})
+				///g, '')
+				.replace(/\s{2,}/g, ' ')
+				.replace(/\:\s+/g, ':')
+
+		minifyJs: (str) ->
+			return str
+				.replace(/^\s+|\s+$/gm, '')
+				.replace(/\n/g, '')
 	}
 
 	Object: {

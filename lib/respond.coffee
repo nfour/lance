@@ -73,7 +73,7 @@ exports = {
 		if not opt.body and opt.view
 			templating.render opt.view, opt.data, (err, rendered) =>
 				if err
-					console.error lance.error 'Error', 'templating renderEct', err
+					console.error lance.error 'Error', 'respond render', err
 					rendered = ''
 
 				opt.body = rendered
