@@ -119,8 +119,6 @@ templating = {
 	renderMergedCoffee: ->
 		return false if Function.empty @mergeCache.coffee
 
-		console.log 'renderMergedCoffee'
-
 		for groupNum, group of @mergeCache.coffee
 			merged	= ''
 			keys	= Object.keys( group ).sort()
@@ -144,8 +142,6 @@ templating = {
 	renderMergedStylus: ->
 		return false if Function.empty @mergeCache.stylus
 
-		console.log 'renderMergedStylus'
-		
 		for groupNum, group of @mergeCache.stylus
 			merged	= ''
 			keys	= Object.keys( group ).sort()
@@ -174,20 +170,20 @@ templating = {
 		fileDir = @resolveDir fileDir
 
 		if not fs.existsSync fileDir
-			console.error lance.error 'Notice', 'templating renderStylus', 'File doesnt exist; ignoring'
+			lance.error 'Notice', 'templating.renderStylus', "'#{fileDir}' doesnt exist; ignoring"
 			return false
 
 		file = fs.readFileSync fileDir, 'utf8'
 
 		if not file?
-			console.error lance.error 'Warning', 'templating renderStylus', 'File not readable'
+			lance.error 'Warning', 'templating.renderStylus', "'#{fileDir}' not readable"
 			return false
 
 		engine = stylus.engine file
 		engine.set 'paths', [ path.dirname fileDir ]
 		engine.render (err, rendered) =>
 			if err
-				console.error lance.error 'Error', 'templating renderStylus stylus.render', err
+				lance.error 'Error', 'templating.renderStylus -> stylus.engine.render', err
 				return false
 
 			renderTo	= @resolveDir stylus.renderTo
@@ -209,12 +205,14 @@ templating = {
 		fileDir = @resolveDir fileDir
 
 		if not fs.existsSync fileDir
-			console.error lance.error 'Notice', 'templating renderCoffee', 'File doesnt exist; ignoring'
+			lance.error 'Notice', 'templating.renderCoffee', "'#{fileDir}' doesnt exist; ignoring"
+			return false
 
 		file = fs.readFileSync fileDir, 'utf8'
 
 		if not file?
-			console.error lance.error 'Warning', 'templating renderCoffee', 'File not readable'
+			lance.error 'Warning', 'templating.renderCoffee', "'#{fileDir}' not readable"
+			return false
 
 		rendered	= coffee.engine.compile file
 
@@ -282,7 +280,7 @@ templating = {
 		fileDir = @resolveDir fileDir
 
 		if not fileDir of @templates.files
-			console.error lance.error 'Warning', 'templating compileTemplate', "[ #{fileDir} ] is not loaded, cannot be compiled"
+			lance.error 'Warning', 'templating.compileTemplate', "'#{fileDir}' is not loaded"
 			return false
 
 		file = @templates.files[fileDir]

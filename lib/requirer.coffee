@@ -127,7 +127,7 @@ exports = (dir, newCfg = {}) ->
 	if fs.existsSync dir
 		return requirer.build dir
 	else
-		console.log ">> Warning, requirer: [ #{dir} ] doesnt exist"
+		lance.error 'Warning', 'requirer', "'#{dir}' doesnt exist"
 		return {}
 	
 

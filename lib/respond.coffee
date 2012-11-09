@@ -12,8 +12,53 @@ require './templating'
 lanceExports	= require 'lance'
 {lance}			= lanceExports
 
+exports = {
+	respond: (req, res, opt = {}) ->
+		@hooks.server.respond.apply lanceExports, [req, res, opt]
+		
+		opt.encoding	= opt.encoding	or 'utf8'
+		opt.code		= opt.code		or 500
+		opt.headers		= opt.headers	or { 'content-type': 'text/html; charset=utf-8' }
+		opt.body		= opt.body		or ''
+		
+		setHeaders res, opt.headers # set headers, as we're not using res.writeHead()
+		
+		res.statusCode = opt.code
+		
+		finalize req, res, opt.body, (body) ->
+			res.end body, opt.encoding
+		
+	serve: (req, res, opt = {}) ->
+		@hooks.server.serve.apply lanceExports, [opt]
+
+		if typeof opt is 'string' then opt = { view: opt }
+			
+		opt.code	= opt.code		or 200
+		opt.headers	= opt.headers	or { 'content-type': 'text/html; charset=utf-8' }
+		opt.body	= opt.body		or ''
+		opt.data	= opt.data		or {}
+		opt.view	= opt.view		or opt.template or '' # lets one choose the words template or view
+
+		{templating} = lanceExports
+
+		if templating.locals then merge opt.data, templating.locals
+
+		if not opt.body and opt.view
+			templating.render opt.view, opt.data, (err, rendered) =>
+				if err
+					lance.error 'Error', 'respond.serve -> templating.render', err
+					rendered = ''
+
+				opt.body = rendered
+
+				@respond req, res, opt
+		else
+			console.log '>> Not using a templater'
+			@respond req, res, opt
+}
+
 # calls the res.setHeader func for each header
-setHeaders = (res, headers, body) ->
+setHeaders = (res, headers) ->
 	for key, val of headers
 		res.setHeader key, val
 	
@@ -38,51 +83,6 @@ finalize = (req, res, body, callback) ->
 	
 	return true
 	
-exports = {
-	respond: (req, res, opt = {}) ->
-		@hooks.server.respond.apply lanceExports, [req, res, opt]
-		
-		opt.encoding	= opt.encoding	or 'utf8'
-		opt.code		= opt.code		or 500
-		opt.headers		= opt.headers	or { 'content-type': 'text/html; charset=utf-8' }
-		opt.body		= opt.body		or ''
-		
-		setHeaders res, opt.headers # set headers, as we're not using writeHead()
-		
-		res.statusCode = opt.code
-		
-		finalize req, res, opt.body, (body) ->
-			res.end body, opt.encoding
-		
-	serve: (req, res, opt = {}) ->
-		@hooks.server.serve.apply lanceExports, [opt]
-
-		if typeof opt is 'string'
-			opt = { view: opt }
-			
-		opt.code	= opt.code		or 200
-		opt.headers	= opt.headers	or { 'content-type': 'text/html; charset=utf-8' }
-		opt.body	= opt.body		or ''
-		opt.data	= opt.data		or {}
-		opt.view	= opt.view		or opt.template or '' # lets one choose the words template or view
-
-		{templating} = lanceExports
-
-		if templating.locals then merge opt.data, templating.locals
-
-		if not opt.body and opt.view
-			templating.render opt.view, opt.data, (err, rendered) =>
-				if err
-					console.error lance.error 'Error', 'respond render', err
-					rendered = ''
-
-				opt.body = rendered
-
-				@respond req, res, opt
-		else
-			console.log '>> Not using a templater'
-			@respond req, res, opt
-}
 
 publicExports = {
 	serve: -> lance.serve.apply lance, arguments

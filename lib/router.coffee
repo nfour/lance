@@ -162,8 +162,8 @@ exports = {
 			return results
 			
 	match: (urlPath = '') ->
-		if ! urlPath or ( Function.type urlPath) isnt 'string'
-			console.log '>> Error, router.match: bad urlPath'
+		if not urlPath or Function.type( urlPath ) isnt 'string'
+			lance.error 'Warning', 'router.match', "'#{urlPath}' urlPath is invalid"
 			return defaultResult
 			
 		return router.match urlPath
