@@ -70,8 +70,8 @@ publicExports = {
 
 # extend lance
 
-merge lance, exports
-merge lanceExports, publicExports
+merge lance			, exports
+merge lanceExports	, publicExports
 
 module.exports = exports
 

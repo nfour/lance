@@ -9,7 +9,6 @@
 
 path = require 'path'
 
-request = require 'request'
 require './functions' # exends natives, making functions avaliable
 
 {clone, merge}	= Object
@@ -25,19 +24,6 @@ lance = {
 	session: {
 		server: {}
 	}
-	
-	error: (type, scope = '', msg...) ->
-		if arguments.length >= 3
-			result = "!! [ #{type} ] in [ #{scope} ]: #{msg.join ' '}"
-		else if arguments.length is 2
-			result = "!! [ #{arguments[0]} ] in [ #{scope} ]"
-		else if arguments.length is 1
-			result = "!! #{arguments[0]}"
-
-		console.error result
-		return result
-
-	request: request
 }
 
 # the exposed, public object for user interaction 
@@ -49,8 +35,9 @@ lanceExports = {
 	init: (newCfg = {}) ->
 		this.lance		= lance # add to the exports for the rest of the project to access
 		this.session	= lance.session
-		this.error		= lance.error
-		this.request	= lance.request
+		
+		lance.request	=
+		this.request	= require 'request'
 
 		lance.project	= project
 		project			= project._unwrap() # initializes the project

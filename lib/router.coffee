@@ -190,8 +190,7 @@ publicExports = {
 
 # extend lance
 
-lance.router = exports
-
-merge lanceExports, publicExports
+lance.router		= exports
+merge lanceExports	, publicExports
 
 module.exports = exports
