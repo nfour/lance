@@ -8,6 +8,7 @@ require './hooks'
 require './router'
 
 {clone, merge} = Object
+{type} = Function
 
 lanceExports	= require 'lance'
 {lance}			= lanceExports
@@ -19,20 +20,25 @@ defaultRequestCb = (req, res) ->
 	}
 
 exports = {
-	createServer: (@requestCb = defaultRequestCb) ->
-		@session.server = http.createServer( @requestHandler @requestCb )
+	createServer: (requestCb) ->
+		if requestCb and type( requestCb ) is 'function'
+			@requestCb = requestCb
+		else
+			@requestCb = defaultRequestCb
+
+		@session.server = http.createServer @requestHandler()
 
 		return @session.server
 
-	listen: () ->
-		return false if ! @session.server
+	listen: ->
+		return false if not @session.server
 		
 		return @session.server.listen.apply @session.server, arguments
 		
 	extendRequest: (req) ->
 		href	= req.url
 		url		= parseUrl req.url, true
-		route	= @router.match url.pathname
+		route	= @router.match url.pathname, req.method
 		
 		req.route		= route
 		req.routes		= @router.namedRoutes
@@ -40,8 +46,6 @@ exports = {
 		req.splats		= route.splats
 		req.callback	= @requestCb
 		req.query		= parseQuery( url.query ) or {}
-		req.url			= url
-		req.href		= href
 		
 		return req
 		
@@ -50,7 +54,7 @@ exports = {
 		
 		return res
 		
-	requestHandler: (requestCb) ->
+	requestHandler: ->
 		return (req, res) =>
 			@extendRequest req
 			@extendResponse res
@@ -60,7 +64,7 @@ exports = {
 			if req.route.callback
 				req.route.callback.apply req, [req, res]
 			else
-				requestCb.apply req, [req, res]
+				@requestCb.apply req, [req, res]
 }
 
 publicExports = {

@@ -95,20 +95,29 @@ templating = {
 		toffee.findIn = path.join cfg.root, toffee.findIn
 
 		@build()
-		@watch() if cluster.isMaster
+		@watch()# if cluster.isMaster
 
 		return true
 
 	# merged renders
 
 	addMerged: (mergeCache, fileDir, rendered) ->
-		return false if not fileDir or not rendered
+		return false if not fileDir or not rendered?
 
-		match = path.basename( fileDir ).match /^[\-_]?(\d+)[\-_]/i
+		# will group filenames like:
+		# (app)-main.coffee, (app)-appendix.coffee		as app.coffee
+		# 1-main.coffee, 1-appendix.coffee				as 1.coffee
+		match = path.basename( fileDir ).match ///
+			^
+			( \d+ | \( [^\)]+ \) )
+			[\-]
+		///i
 
 		return false if not match or not match[1]
 
 		if group = match[1]
+			group = group.replace /^\(|\)$/g, '' # trim surrounding round brackets
+
 			if not ( group of mergeCache ) then mergeCache[group] = {}
 			mergeCache[group][fileDir] = rendered
 
@@ -119,7 +128,7 @@ templating = {
 	renderMergedCoffee: ->
 		return false if Function.empty @mergeCache.coffee
 
-		for groupNum, group of @mergeCache.coffee
+		for groupName, group of @mergeCache.coffee
 			merged	= ''
 			keys	= Object.keys( group ).sort()
 
@@ -133,7 +142,7 @@ templating = {
 
 			renderTo	= @resolveDir coffee.renderTo
 
-			newFileDir	= path.join renderTo, "group-#{groupNum}.js"
+			newFileDir	= path.join renderTo, "#{groupName}.js"
 
 			fs.writeFile newFileDir, merged
 
@@ -142,7 +151,7 @@ templating = {
 	renderMergedStylus: ->
 		return false if Function.empty @mergeCache.stylus
 
-		for groupNum, group of @mergeCache.stylus
+		for groupName, group of @mergeCache.stylus
 			merged	= ''
 			keys	= Object.keys( group ).sort()
 
@@ -156,7 +165,7 @@ templating = {
 
 			renderTo	= @resolveDir stylus.renderTo
 
-			newFileDir	= path.join renderTo, "group-#{groupNum}.css"
+			newFileDir	= path.join renderTo, "#{groupName}.css"
 
 			fs.writeFile newFileDir, merged
 
@@ -226,7 +235,7 @@ templating = {
 		if not @addMerged @mergeCache.coffee, fileDir, rendered
 			fs.writeFile newFileDir, rendered
 		else
-			@renderMergedStylus()
+			@renderMergedCoffee()
 
 		return true
 

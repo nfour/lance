@@ -35,9 +35,6 @@ lanceExports = {
 	init: (newCfg = {}) ->
 		this.lance		= lance # add to the exports for the rest of the project to access
 		this.session	= lance.session
-		
-		lance.request	=
-		this.request	= require 'request'
 
 		lance.project	= project
 		project			= project._unwrap() # initializes the project
