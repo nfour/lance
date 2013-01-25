@@ -1,61 +1,53 @@
 
-{clone, merge} = Object
+lance = require './lance'
 
 zlib	= require 'zlib'
 path	= require 'path'
 
-require './functions'
-require './server'
-require './hooks'
-require './templating'
+{clone, merge} = Object
 
-lanceExports	= require 'lance'
-{lance}			= lanceExports
+lance.respond = (req, res, opt = {}) ->
+	lance.hooks.server.respond.apply lance, [req, res, opt]
+	
+	opt.encoding	= opt.encoding	or 'utf8'
+	opt.code		= opt.code		or 500
+	opt.headers		= opt.headers	or { 'content-type': 'text/html; charset=utf-8' }
+	opt.body		= opt.body		or ''
+	
+	setHeaders res, opt.headers # set headers, as we're not using res.writeHead()
+	
+	res.statusCode = opt.code
+	
+	finalize req, res, opt.body, (body) ->
+		res.end body, opt.encoding
 
-exports = {
-	respond: (req, res, opt = {}) ->
-		@hooks.server.respond.apply lanceExports, [req, res, opt]
+lance.serve = (req, res, opt = {}) ->
+	lance.hooks.server.serve.apply lance, [opt]
+
+	if typeof opt is 'string' then opt = { view: opt }
 		
-		opt.encoding	= opt.encoding	or 'utf8'
-		opt.code		= opt.code		or 500
-		opt.headers		= opt.headers	or { 'content-type': 'text/html; charset=utf-8' }
-		opt.body		= opt.body		or ''
-		
-		setHeaders res, opt.headers # set headers, as we're not using res.writeHead()
-		
-		res.statusCode = opt.code
-		
-		finalize req, res, opt.body, (body) ->
-			res.end body, opt.encoding
-		
-	serve: (req, res, opt = {}) ->
-		@hooks.server.serve.apply lanceExports, [opt]
+	opt.code	= opt.code		or 200
+	opt.headers	= opt.headers	or { 'content-type': 'text/html; charset=utf-8' }
+	opt.body	= opt.body		or ''
+	opt.data	= opt.data		or {}
+	opt.view	= opt.view		or opt.template or '' # lets one choose the words template or view
 
-		if typeof opt is 'string' then opt = { view: opt }
-			
-		opt.code	= opt.code		or 200
-		opt.headers	= opt.headers	or { 'content-type': 'text/html; charset=utf-8' }
-		opt.body	= opt.body		or ''
-		opt.data	= opt.data		or {}
-		opt.view	= opt.view		or opt.template or '' # lets one choose the words template or view
+	{templating} = lance
 
-		{templating} = lanceExports
+	if templating.locals then merge opt.data, templating.locals
 
-		if templating.locals then merge opt.data, templating.locals
+	if not opt.body and opt.view
+		templating.render opt.view, opt.data, (err, rendered) =>
+			if err
+				lance.error 'Error', 'respond.serve -> templating.render', err
+				rendered = ''
 
-		if not opt.body and opt.view
-			templating.render opt.view, opt.data, (err, rendered) =>
-				if err
-					lance.error 'Error', 'respond.serve -> templating.render', err
-					rendered = ''
+			opt.body = rendered
 
-				opt.body = rendered
-
-				@respond req, res, opt
-		else
-			console.log '>> Not using a templater'
-			@respond req, res, opt
-}
+			lance.respond req, res, opt
+	else
+		console.log '>> Not using a templater'
+		lance.respond req, res, opt
 
 # calls the res.setHeader func for each header
 setHeaders = (res, headers) ->
@@ -82,16 +74,5 @@ finalize = (req, res, body, callback) ->
 		callback body
 	
 	return true
-	
 
-publicExports = {
-	serve: -> lance.serve.apply lance, arguments
-}
-
-# extend lance
-
-merge lance, exports
-merge lanceExports, publicExports
-
-module.exports = exports
 

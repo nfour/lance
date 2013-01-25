@@ -2,6 +2,8 @@
 path	= require 'path'
 fs		= require 'fs'
 
+lance = require './lance'
+
 clone	=
 merge	=
 cfg		= undefined
@@ -109,8 +111,8 @@ requirer = {
 		return pathname
 }
 
-
-exports = (dir, newCfg = {}) ->
+lance.requirer =
+module.exports = (dir, newCfg = {}) ->
 	{clone, merge} = Object
 	
 	if ( Function.type arguments[0] ) is 'object'
@@ -130,5 +132,3 @@ exports = (dir, newCfg = {}) ->
 		lance.error 'Warning', 'requirer', "'#{dir}' doesnt exist"
 		return {}
 	
-
-module.exports = exports

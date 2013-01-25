@@ -4,8 +4,7 @@ require './functions'
 {clone, merge, toArray}	= Object
 {type} = Function
 
-lanceExports	= require 'lance'
-{lance}			= lanceExports
+lance = require './lance'
 
 cfg = {
 	index: true
@@ -155,7 +154,7 @@ router = {
 		return new RegExp "^#{pattern}$", 'i'
 }
 
-exports = {
+lance.router = {
 	cfg: cfg
 	
 	add: (method, patterns, name = '', callback = false) ->
@@ -215,33 +214,3 @@ exports = {
 	namedRoutes	: router.namedRoutes
 	indexes		: router.indexes
 }
-
-publicExports = {
-	router: {
-		cfg			: cfg
-		add			: -> lance.router.add.apply		lance.router, arguments
-		match		: -> lance.router.match.apply	lance.router, arguments
-		routes		: router.routes
-		namedRoutes	: router.namedRoutes
-		indexes		: router.indexes
-	}
-	
-	route: {
-		get		: -> lance.router.get.apply			lance.router, arguments
-		post	: -> lance.router.post.apply		lance.router, arguments
-		head	: -> lance.router.head.apply		lance.router, arguments
-		put		: -> lance.router.put.apply			lance.router, arguments
-		delete	: -> lance.router.delete.apply		lance.router, arguments
-		trace	: -> lance.router.trace.apply		lance.router, arguments
-		connect	: -> lance.router.connect.apply		lance.router, arguments
-		options	: -> lance.router.options.apply		lance.router, arguments
-	}
-
-}
-
-# extend lance
-
-lance.router		= exports
-merge lanceExports	, publicExports
-
-module.exports = exports

@@ -1,8 +1,7 @@
 
-lanceExports	= require 'lance'
-lance			= lanceExports.lance
+lance = require './lance'
 
-exports = {
+lance.hooks = {
 	server: {
 		request	: (req, res) ->
 		respond	: (req, res, opt) ->
@@ -10,10 +9,3 @@ exports = {
 	}
 	
 }
-
-# extend lance
-
-lance.hooks			= exports
-lanceExports.hooks	= exports
-
-module.exports = exports

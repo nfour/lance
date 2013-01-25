@@ -3,14 +3,10 @@ path	= require 'path'
 fs		= require 'fs'
 cluster	= require 'cluster'
 
-require './functions'
-require './hooks'
+lance = require './lance'
 
 {clone, merge}	= Object
 {type, isAbsolute, changeExt, isExt, exploreDir} = Function
-
-lanceExports	= require 'lance'
-lance			= lanceExports.lance
 
 template	=
 ect			=
@@ -19,7 +15,7 @@ stylus		=
 toffee		=
 cfg			= {}
 
-templating = {
+lance.templating = {
 	# vars
 
 	cfg: {}
@@ -40,6 +36,8 @@ templating = {
 		coffee		: {}
 	}
 
+	locals: {}
+
 	# functions
 
 	resolveDir: (dir, root = '') -> if isAbsolute( dir ) then dir else path.join root or cfg.root, dir
@@ -52,7 +50,7 @@ templating = {
 			root	= ''
 
 		# set module-scope variables
-		cfg		= clone lance.project.cfg.lance.templating or {}
+		cfg		= clone lance.cfg.templating or {}
 		@cfg	= cfg
 
 		merge cfg, newCfg # max depth of 2, for objects
@@ -369,26 +367,7 @@ templating = {
 		return true
 }
 
-defaultMergeCache = clone templating.mergeCache
+defaultMergeCache = clone lance.templating.mergeCache
 
-# extend
+lance.templating.render = lance.templating.renderEct
 
-lance.templating = templating
-
-lanceExports.templating = {
-	cfg				: templating.cfg
-	locals			: {}
-	init			: -> templating.init.apply				templating, arguments
-
-	render			: -> templating.renderEct.apply			templating, arguments
-	renderToffee	: -> templating.renderToffee.apply		templating, arguments
-	renderEct		: -> templating.renderEct.apply			templating, arguments
-	renderStylus	: -> templating.renderStylus.apply		templating, arguments
-	renderCoffee	: -> templating.renderCoffee.apply		templating, arguments
-	renderTemplate	: -> templating.render.apply			templating, arguments
-	compileTemplate	: -> templating.compileTemplate.apply	templating, arguments
-
-	build			: -> templating.build.apply				templating, arguments
-	watch			: -> templating.watch.apply				templating, arguments
-	mergeCache		: templating.mergeCache
-}

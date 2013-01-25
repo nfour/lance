@@ -12,45 +12,30 @@ path = require 'path'
 require './functions' # exends natives, making functions avaliable
 
 {clone, merge}	= Object
-{requirer}		= Function
 
 # project struct
-lanceDir	= path.dirname __dirname
-project		= requirer lanceDir, { paths: false, wrap: true }
+defaultCfg = require '../cfg/lance'
 
 # the core, private object
-lance = {
-	requirer: requirer
-	session: {
-		server: {}
-	}
-}
+module.exports	=
+lance			= (newCfg = {}) ->
+	lance.cfg		= merge clone( defaultCfg ), newCfg
+	lance.rootDir	= lance.cfg.root or path.dirname require.main.filename
 
-# the exposed, public object for user interaction 
-# starts with minimal properties
-# requirer is exposed so that it may be used immediately
-lanceExports = {
-	requirer: requirer
+	lance.templating.init lance.cfg.templating or {} # make this function oriented ########################
+	
+	return lance
 
-	init: (newCfg = {}) ->
-		this.lance		= lance # add to the exports for the rest of the project to access
-		this.session	= lance.session
+lance.init		= lance
+lance.requirer	= require './requirer'
+lance.session	= { server: {} }
 
-		lance.project	= project
-		project			= project._unwrap() # initializes the project
+require './hooks'
+require './exceptions'
+require './router'
+require './templating'
+require './server'
+require './respond'
 
-		lance.cfg		= merge clone( project.cfg.lance ), newCfg
-
-		this.rootDir	=
-		lance.rootDir	= lance.cfg.root or path.dirname require.main.filename
-
-		this.lanceDir	=
-		lance.lanceDir	= lanceDir
-
-		lance.templating.init lance.cfg.templating or {}
-		
-		return this
-}
-
-module.exports = lanceExports
+module.exports = lance
 

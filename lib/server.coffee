@@ -2,16 +2,12 @@
 http		= require 'http'
 parseUrl	= require('url').parse
 parseQuery	= require('querystring').parse
+Cookies		= require 'cookies'
 
-require './functions'
-require './hooks'
-require './router'
+lance = require './lance'
 
 {clone, merge} = Object
 {type} = Function
-
-lanceExports	= require 'lance'
-{lance}			= lanceExports
 
 defaultRequestCb = (req, res) ->
 	res.serve req, res, {
@@ -19,63 +15,54 @@ defaultRequestCb = (req, res) ->
 		body: '<html><body>500</body></html>'
 	}
 
-exports = {
-	createServer: (requestCb) ->
-		if requestCb and type( requestCb ) is 'function'
-			@requestCb = requestCb
+lance.createServer = (requestCb) ->
+	if requestCb and type( requestCb ) is 'function'
+		lance.requestCb = requestCb
+	else
+		lance.requestCb = defaultRequestCb
+
+	lance.session.server = http.createServer lance.requestHandler()
+
+	return lance.session.server
+
+lance.listen = ->
+	return false if not lance.session.server
+	
+	return lance.session.server.listen.apply lance.session.server, arguments
+
+lance.extendRequest = (req) ->
+	href	= req.url
+	url		= parseUrl req.url, true
+	route	= lance.router.match url.pathname, req.method
+	
+	req.route		= route
+	req.routes		= lance.router.namedRoutes
+	req.path		= route.path
+	req.splats		= route.splats
+	req.callback	= lance.requestCb
+	req.query		= parseQuery( url.query ) or {}
+	
+	return req
+	
+lance.extendResponse = (res) ->
+	res.serve = @serve
+	
+	return res
+	
+lance.requestHandler = ->
+	return (req, res) =>
+		lance.extendRequest req
+		lance.extendResponse res
+		
+		cookies = new Cookies req, res
+
+		req.cookies =
+		res.cookies = cookies
+
+		lance.hooks.server.request.apply lance, [req, res]
+		
+		if req.route.callback
+			req.route.callback.apply req, [req, res]
 		else
-			@requestCb = defaultRequestCb
-
-		@session.server = http.createServer @requestHandler()
-
-		return @session.server
-
-	listen: ->
-		return false if not @session.server
-		
-		return @session.server.listen.apply @session.server, arguments
-		
-	extendRequest: (req) ->
-		href	= req.url
-		url		= parseUrl req.url, true
-		route	= @router.match url.pathname, req.method
-		
-		req.route		= route
-		req.routes		= @router.namedRoutes
-		req.path		= route.path
-		req.splats		= route.splats
-		req.callback	= @requestCb
-		req.query		= parseQuery( url.query ) or {}
-		
-		return req
-		
-	extendResponse: (res) ->
-		res.serve = lanceExports.serve
-		
-		return res
-		
-	requestHandler: ->
-		return (req, res) =>
-			@extendRequest req
-			@extendResponse res
-			
-			@hooks.server.request.apply lanceExports, [req, res]
-			
-			if req.route.callback
-				req.route.callback.apply req, [req, res]
-			else
-				@requestCb.apply req, [req, res]
-}
-
-publicExports = {
-	createServer	: -> lance.createServer.apply	lance, arguments
-	listen			: -> lance.listen.apply			lance, arguments
-}
-
-# extend lance
-
-merge lance			, exports
-merge lanceExports	, publicExports
-
-module.exports = exports
+			lance.requestCb.apply req, [req, res]
 

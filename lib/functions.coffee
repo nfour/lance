@@ -4,6 +4,7 @@
 fs			= require 'fs'
 path		= require 'path'
 requirer	= require './requirer'
+lance		= require './lance'
 
 typeTable = {
 	'Boolean'	: Boolean
@@ -19,7 +20,7 @@ typeTable = {
 	'NaN'		: NaN
 }
 
-functions = {
+lance.functions = functions = {
 	requirer: requirer
 	util: require 'util'
 	type: (vari) ->
@@ -121,6 +122,9 @@ functions = {
 		else
 			return false
 
+	wrapper: (fn, newThis) ->
+		return () -> fn.apply newThis, arguments
+
 	String: {
 		minify: (str) ->
 			return str
@@ -201,4 +205,4 @@ functions = {
 # extends Object, Function etc.
 functions.Object.extendNatives functions
 
-module.exports = functions
+module.exports	= lance.functions
