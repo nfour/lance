@@ -1,5 +1,6 @@
 
-lance = require './lance'
+lance	= require './lance'
+fs		= require 'fs'
 
 lance.error = (type, scope = '', msg...) ->
 	if arguments.length >= 3
@@ -12,4 +13,13 @@ lance.error = (type, scope = '', msg...) ->
 	console.error result
 	
 	return result
+
+process.on 'XuncaughtException', (err) ->
+	console.error 'uncaughtException:', err
+	
+	if lance.rootDir
+		logPath	= lance.rootDir + '/errors.txt'
+		line	= new Date().toString() + ' -- ' + err + '\n'
+
+		fs.appendFile logPath, line
 

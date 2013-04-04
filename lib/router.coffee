@@ -78,7 +78,7 @@ router = {
 			
 			captures = route.regex.exec urlPath
 
-			continue if ! captures or captures.length < 1
+			continue if not captures or captures.length < 1
 			
 			captures = captures[1..]
 			

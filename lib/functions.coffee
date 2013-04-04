@@ -20,7 +20,8 @@ typeTable = {
 	'NaN'		: NaN
 }
 
-lance.functions = functions = {
+lance.functions	=
+functions		= {
 	requirer: requirer
 	util: require 'util'
 	type: (vari) ->
@@ -150,9 +151,6 @@ lance.functions = functions = {
 	}
 
 	Object: {
-		### Works by taking an object. If the object has a property matching a native object name (case senstive) eg. Object, String etc.
-		then the object properties of that matched object will be applied to its respective native object. If there is
-		no propertive match with a native's name, then that property will be added to the Object native. ###
 		extendNatives: (obj) ->
 			for own key, val of obj
 				if key of typeTable
@@ -171,30 +169,28 @@ lance.functions = functions = {
 
 
 		clone: (obj) ->
-			return JSON.parse JSON.stringify obj
+			return functions.Object.merge {}, obj
 
 		merge: (obj1, obj2, depth = 8) ->
-			merge = (obj1, obj2, depth) ->
-				if depth >= 1
-					for own key of obj2
-						if (
-							( functions.type obj2[key] ) is 'object' and
-							obj1[key] and
-							( functions.type obj1[key] ) is 'object'
-						)
-							arguments.callee obj1[key], obj2[key], depth - 1
-						else
-							obj1[key] = obj2[key]
-				return obj1
+			if depth >= 1
+				for own key of obj2
+					if (
+						functions.type( obj2[key] )  is 'object' and
+						obj1[key] and
+						functions.type( obj1[key] ) is 'object'
+					)
+						arguments.callee obj1[key], obj2[key], depth - 1
+					else
+						obj1[key] = obj2[key]
 
-			return merge obj1, obj2, depth
+			return obj1
 			
 		toArray: (args, sort = false) ->
 			ary = Array::slice.call( args )
 			
 			if sort
 				if ( funcs.type sort ) is 'function'
-					ary = ary.sort(sort)
+					ary = ary.sort sort
 				else
 					ary = ary.sort()
 					

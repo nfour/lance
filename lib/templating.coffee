@@ -93,7 +93,7 @@ lance.templating = {
 		toffee.findIn = path.join cfg.root, toffee.findIn
 
 		@build()
-		@watch()# if cluster.isMaster
+		@watch() if cluster.isMaster
 
 		return true
 
@@ -287,8 +287,7 @@ lance.templating = {
 		fileDir = @resolveDir fileDir
 
 		if not fileDir of @templates.files
-			lance.error 'Warning', 'templating.compileTemplate', "'#{fileDir}' is not loaded"
-			return false
+			return lance.error 'Warning', 'templating.compileTemplate', "'#{fileDir}' is not loaded"
 
 		file = @templates.files[fileDir]
 
@@ -299,30 +298,32 @@ lance.templating = {
 		return compiled
 
 	# watching
-
 	watchStylus: (fileDir) ->
-		fs.watch fileDir, (event) =>
-			return false if event isnt 'change'
+		if not @watching.stylus[fileDir]
+			fs.watch fileDir, (event) =>
+				return false if event isnt 'change'
 
-			@renderStylus fileDir
+				@renderStylus fileDir
 
-		@watching.stylus[fileDir] = true
+			@watching.stylus[fileDir] = true
 
 	watchCoffee: (fileDir) ->
-		fs.watch fileDir, (event) =>
-			return false if event isnt 'change'
+		if not @watching.coffee[fileDir]
+			fs.watch fileDir, (event) =>
+				return false if event isnt 'change'
 
-			@renderCoffee fileDir
+				@renderCoffee fileDir
 
-		@watching.coffee[fileDir] = true
+				@watching.coffee[fileDir] = true
 
 	watchTemplates: (fileDir) ->
-		fs.watch fileDir, (event) =>
-			return false if event isnt 'change'
+		if not @watching.templates[fileDir]
+			fs.watch fileDir, (event) =>
+				return false if event isnt 'change'
 
-			@compileTemplate fileDir
+				@compileTemplate fileDir
 
-		@watching.templates[fileDir] = true
+				@watching.templates[fileDir] = true
 
 	# build/watch directory iteration and cumulative commands
 

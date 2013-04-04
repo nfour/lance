@@ -1,5 +1,6 @@
 
 module.exports = {
+	ascii: true
 	lactate:
 		cache: true
 

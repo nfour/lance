@@ -8,6 +8,7 @@
 ###
 
 path = require 'path'
+cluster = require 'cluster'
 
 require './functions' # exends natives, making functions avaliable
 
@@ -24,13 +25,20 @@ lance			= (newCfg = {}) ->
 
 	lance.templating.init lance.cfg.templating or {} # make this function oriented ########################
 	
+	if lance.cfg.ascii and cluster.isMaster
+		console.log """
+		\       __                     
+		\      / /___ _____  ________  
+		\     / / __ `/ __ \\/ ___/ _ \\ 
+		\    / / /_/ / / / / /__/  __/ 
+		\   /_/\\__/_/_/ /_/\\___/\\___/  
+		\                              
+		"""
 	return lance
 
 lance.init		= lance
-lance.requirer	= require './requirer'
 lance.session	= { server: {} }
 
-require './hooks'
 require './exceptions'
 require './router'
 require './templating'

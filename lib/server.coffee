@@ -3,66 +3,77 @@ http		= require 'http'
 parseUrl	= require('url').parse
 parseQuery	= require('querystring').parse
 Cookies		= require 'cookies'
-
-lance = require './lance'
+lance		= require './lance'
 
 {clone, merge} = Object
 {type} = Function
 
-defaultRequestCb = (req, res) ->
-	res.serve req, res, {
-		code: 500 
-		body: '<html><body>500</body></html>'
-	}
+key		= 'Wwavifkuiv7C5JFNCDTiyD6U1RGxz48f' # put this in the cfg - may want to save to file on first run
+keygrip	= require('keygrip')([key])
 
-lance.createServer = (requestCb) ->
-	if requestCb and type( requestCb ) is 'function'
-		lance.requestCb = requestCb
+lance.createServer = (requestCallback) ->
+	if requestCallback and type( requestCallback ) is 'function'
+		lance.requestCallback = requestCallback
 	else
-		lance.requestCb = defaultRequestCb
+		lance.requestCallback = (req, res) ->
+			res.serve.code '500'
 
 	lance.session.server = http.createServer lance.requestHandler()
 
 	return lance.session.server
 
 lance.listen = ->
-	return false if not lance.session.server
+	if not lance.session.server
+		return lance.error 'err', "lance.listen, No server"
 	
 	return lance.session.server.listen.apply lance.session.server, arguments
 
-lance.extendRequest = (req) ->
+lance.extendRequest = (req, done = ->) ->
 	href	= req.url
-	url		= parseUrl req.url, true
+	url		= parseUrl href, true
 	route	= lance.router.match url.pathname, req.method
-	
+
 	req.route		= route
 	req.routes		= lance.router.namedRoutes
 	req.path		= route.path
 	req.splats		= route.splats
 	req.callback	= lance.requestCb
-	req.query		= parseQuery( url.query ) or {}
-	
-	return req
+
+	req.query	=
+	req.GET		= url.query
+
+	req.POST	= {}
+
+	if req.method is 'POST'
+		postBody = ''
+
+		req.on 'data', (chunk) ->
+			postBody += chunk
+
+		req.on 'end', ->
+			console.log postBody
+			req.POST = parseQuery postBody
+
+			done()
+	else
+		done()
 	
 lance.extendResponse = (res) ->
 	res.serve = @serve
-	
+
 	return res
-	
+
 lance.requestHandler = ->
 	return (req, res) =>
-		lance.extendRequest req
-		lance.extendResponse res
-		
-		cookies = new Cookies req, res
+		cookies = new Cookies req, res, keygrip
 
 		req.cookies =
 		res.cookies = cookies
-
-		lance.hooks.server.request.apply lance, [req, res]
 		
-		if req.route.callback
-			req.route.callback.apply req, [req, res]
-		else
-			lance.requestCb.apply req, [req, res]
+		lance.extendResponse res
+		lance.extendRequest req, ->
+			if req.route.callback
+				req.route.callback req, res
+			else
+				lance.requestCallback req, res
 
