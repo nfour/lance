@@ -3,7 +3,6 @@
 # It does NOT extend prototypes. Instead only the globals; Object, Array etc.
 fs			= require 'fs'
 path		= require 'path'
-requirer	= require './requirer'
 lance		= require './lance'
 
 typeTable = {

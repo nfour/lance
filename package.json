@@ -1,6 +1,6 @@
 {
 	"name"			: "lance",
-	"version"		: "0.7.0",
+	"version"		: "0.7.1",
 	"author"		: "TurtlePie [ github.com/TurtlePie ]",
 	"description"	: "A sharp Node.js web framework",
 	"main"			: "./index",
@@ -15,6 +15,6 @@
 	},
 	"repository" : {
 		"type" : "git",
-		"url" : "http://github.com/nfour/lance"
+		"url" : "https://github.com/nfour/lance"
 	}
 }
