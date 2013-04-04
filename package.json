@@ -1,6 +1,6 @@
 {
 	"name"			: "lance",
-	"version"		: "0.7.3",
+	"version"		: "0.7.4",
 	"author"		: "TurtlePie [ github.com/TurtlePie ]",
 	"description"	: "A sharp Node.js web framework",
 	"main"			: "./index",

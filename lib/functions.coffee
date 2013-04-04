@@ -21,7 +21,6 @@ typeTable = {
 
 lance.functions	=
 functions		= {
-	requirer: requirer
 	util: require 'util'
 	type: (vari) ->
 		for type of typeTable
