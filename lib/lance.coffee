@@ -13,7 +13,7 @@ ect		= require 'ect'
 
 require './functions' # exends natives, making functions avaliable
 
-{clone, merge}	= Object
+{clone, merge} = Object
 
 # project struct
 defaultCfg = require '../cfg/lance'
