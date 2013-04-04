@@ -1,15 +1,14 @@
 {
 	"name"			: "lance",
-	"version"		: "0.7.4",
+	"version"		: "0.7.6",
 	"author"		: "TurtlePie [ github.com/TurtlePie ]",
 	"description"	: "A sharp Node.js web framework",
 	"main"			: "./index",
 	"dependencies": {
 		"coffee-script"	: ">= 1.5.x",
-		"ect"			: ">= 0.4.11",
+		"ect"			: ">= 0.4.x",
 		"keygrip"		: ">= 0.2.2",
 		"cookies"		: ">= 0.3.5",
-		"lactate"		: ">= 0.13.11",
 		"stylus"		: ">= 0.32.x"
 	},
 	"repository" : {

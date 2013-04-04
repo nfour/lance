@@ -7,8 +7,9 @@
                             
 ###
 
-path = require 'path'
-cluster = require 'cluster'
+path	= require 'path'
+cluster	= require 'cluster'
+ect		= require 'ect'
 
 require './functions' # exends natives, making functions avaliable
 
