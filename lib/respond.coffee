@@ -8,7 +8,7 @@ path	= require 'path'
 
 lance.httpCodes = require './httpcodes'
 
-lance.serve = (req, res, opt = {}) ->
+lance.serve	= (req, res, opt = {}) ->
 	if typeof opt is 'string'
 		opt = { view: opt }
 		
@@ -18,19 +18,16 @@ lance.serve = (req, res, opt = {}) ->
 	opt.data	= opt.data		or {}
 	opt.view	= opt.view		or opt.template or '' # lets one choose the words template or view
 
-	{templating} = lance
-
-	if templating.locals
-		merge opt.data, templating.locals
+	if lance.templating.locals
+		merge opt.data, lance.templating.locals
 
 	opt.data.req ?= req
 	opt.data.res ?= res
 
 	if not opt.body and opt.view
-		templating.render opt.view, opt.data, (err, rendered) =>
+		lance.templating.render opt.view, opt.data, (err, rendered) =>
 			if err
-				lance.error 'err', "lance.serve templating.render, #{err}"
-				return req.serve.badRequest()
+				return lance.serve.code 400
 
 			opt.body = rendered
 
@@ -39,21 +36,21 @@ lance.serve = (req, res, opt = {}) ->
 		lance.respond req, res, opt
 
 lance.serve.json = (obj) ->
-	res.writeHead 200, { 'content-type': 'application/json' }
-	res.end JSON.stringify obj
+	lance.res.writeHead 200, { 'content-type': 'application/json' }
+	lance.res.end JSON.stringify obj
 
-lance.serve.redirect = (path = '', body = '') ->
-	res.writeHead 302, { 'location': path, 'content-type': 'text/plain; charset=utf-8' }
-	res.end body
+lance.serve.redirect = (path = '') ->
+	lance.res.writeHead 302, { 'location': path, 'content-type': 'text/plain; charset=utf-8' }
+	lance.res.end()
 
-lance.serve.basic = (code, headers = { 'content-type': 'text/plain; charset=utf-8' }, body = '') ->
-	res.writeHead code, headers
+lance.serve.code	= (code, headers = { 'content-type': 'text/plain; charset=utf-8' }, body = '') ->
+	lance.res.writeHead code, headers
 
 	if body
-		res.end body
+		lance.res.end body
 	else
 		title = lance.httpCodes[ code.toString() ] or ''
-		res.end "#{code} - #{title}"
+		lance.res.end "#{code} #{title}"
 
 lance.respond = (req, res, opt = {}) ->
 	opt.encoding	= opt.encoding	or 'utf8'
@@ -70,27 +67,26 @@ lance.respond = (req, res, opt = {}) ->
 
 	res.end opt.body, opt.encoding
 
+### compression. too mem-leaky and cpu intense, will pass.
 
-###
-# handles compression, related headers and content-length
-finalize = (req, res, body, done = ->) ->
-	normalize = (err, body) ->
-		if err then throw new Error err
-		done body
+		finalize = (req, res, body, done = ->) ->
+			normalize = (err, body) ->
+				if err then throw new Error err
+				done body
 
-	acceptEncoding = req.headers['accept-encoding'] or ''
+			acceptEncoding = req.headers['accept-encoding'] or ''
 
-	if acceptEncoding.match /\bgzip\b/i
-		res.setHeader 'content-encoding', 'gzip'
-		zlib.gzip body, normalize
-	else if acceptEncoding.match /\bdeflate\b/i
-		res.setHeader 'content-encoding', 'deflate'
-		zlib.deflate body, normalize
-	else
+			if acceptEncoding.match /\bgzip\b/i
+				res.setHeader 'content-encoding', 'gzip'
+				zlib.gzip body, normalize
+			else if acceptEncoding.match /\bdeflate\b/i
+				res.setHeader 'content-encoding', 'deflate'
+				zlib.deflate body, normalize
+			else
 
-	res.setHeader 'content-length', body.length
-	done body
+			res.setHeader 'content-length', body.length
+			done body
 
-	return true
+			return true
 ###
 

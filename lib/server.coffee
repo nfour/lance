@@ -8,27 +8,24 @@ lance		= require './lance'
 {clone, merge} = Object
 {type} = Function
 
-key		= 'Wwavifkuiv7C5JFNCDTiyD6U1RGxz48f' # put this in the cfg - may want to save to file on first run
-keygrip	= require('keygrip')([key])
-
 lance.createServer = (requestCallback) ->
 	if requestCallback and type( requestCallback ) is 'function'
 		lance.requestCallback = requestCallback
 	else
-		lance.requestCallback = (req, res) ->
-			res.serve.code '500'
+		lance.requestCallback = ->
+			lance.serve.code 404
 
 	lance.session.server = http.createServer lance.requestHandler()
 
 	return lance.session.server
 
 lance.listen = ->
-	if not lance.session.server
-		return lance.error 'err', "lance.listen, No server"
-	
-	return lance.session.server.listen.apply lance.session.server, arguments
+	if lance.session.server
+		return lance.session.server.listen.apply lance.session.server, arguments
 
 lance.extendRequest = (req, done = ->) ->
+	lance.req = req
+
 	href	= req.url
 	url		= parseUrl href, true
 	route	= lance.router.match url.pathname, req.method
@@ -38,6 +35,7 @@ lance.extendRequest = (req, done = ->) ->
 	req.path		= route.path
 	req.splats		= route.splats
 	req.callback	= lance.requestCb
+	req.href		= href
 
 	req.query	=
 	req.GET		= url.query
@@ -59,13 +57,14 @@ lance.extendRequest = (req, done = ->) ->
 		done()
 	
 lance.extendResponse = (res) ->
-	res.serve = @serve
+	lance.res	= res
+	res.serve	= lance.serve
 
 	return res
 
 lance.requestHandler = ->
 	return (req, res) =>
-		cookies = new Cookies req, res, keygrip
+		cookies = new Cookies req, res, lance.keygrip
 
 		req.cookies =
 		res.cookies = cookies

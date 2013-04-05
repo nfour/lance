@@ -1,28 +1,12 @@
 
 module.exports = {
-	ascii: true
-	lactate:
-		cache: true
+	ascii: true # displays ascii art for lance at startup
+	catchUncaughtErrors: true # catches any uncaught errors into lance.error()
+
+	keygripKeys: ['Wwavifkuiv7C5JFNCDTiyD6U1RGxz48f'] # used for encoding cookies
 
 	templating: {
 		root	: ''
-
-		template: {
-			ext		: '.~~~'
-			findIn	: ''
-			engine	: undefined
-			options	: {}
-			minify	: true
-		}
-
-		toffee: {
-			engine	: undefined
-			ext		: '.toffee'
-			findIn	: ''
-			minify	: true
-
-			options: {}
-		}
 
 		ect: {
 			engine	: undefined
@@ -30,7 +14,7 @@ module.exports = {
 			findIn	: ''
 			minify	: true
 
-			options: {
+			options: { # options object that is passed when initiating an ECT engine
 				root	: ''
 				cache	: true
 				ext		: ''

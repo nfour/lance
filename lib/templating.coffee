@@ -2,78 +2,38 @@
 path	= require 'path'
 fs		= require 'fs'
 cluster	= require 'cluster'
+lance	= require './lance'
 
-lance = require './lance'
+{clone, merge} = Object
+{type, isAbsolute, changeExt, isExt, exploreDir, empty} = Function
+{minify, minifyCss, minifyJs} = String
 
-{clone, merge}	= Object
-{type, isAbsolute, changeExt, isExt, exploreDir} = Function
+cfg		=
+stylus	=
+coffee	=
+ect		= undefined
 
-template	=
-ect			=
-coffee		=
-stylus		=
-toffee		=
-cfg			= {}
+tpl					=
+lance.tpl			=
+lance.templating	= (newCfg = {}) ->
+	cfg = merge clone( lance.cfg.templating ), newCfg
 
-lance.templating = {
-	# vars
+	cfg.root = cfg.root or lance.rootDir
 
-	cfg: {}
+	stylus		= cfg.stylus
+	coffee		= cfg.coffee
+	ect			= cfg.ect
+	
+	coffee.engine = coffee.engine or require 'coffee-script'
 
-	templates: {
-		compiled	: {}
-		files		: {}
-	}
+	try stylus.engine	= stylus.engine	or require 'stylus'
+	try ect.engine		= ect.engine	or require 'ect'
 
-	mergeCache: {
-		coffee: {}
-		stylus: {}
-	}
+	stylus	= false if not stylus.engine
+	ect		= false if not ect.engine
 
-	watching: {
-		templates	: {}
-		stylus		: {}
-		coffee		: {}
-	}
-
-	locals: {}
-
-	# functions
-
-	resolveDir: (dir, root = '') -> if isAbsolute( dir ) then dir else path.join root or cfg.root, dir
-
-	# initialization
-
-	init: (root, newCfg = {}) ->
-		if type( arguments[0] ) is 'object'
-			newCfg	= arguments[0]
-			root	= ''
-
-		# set module-scope variables
-		cfg		= clone lance.cfg.templating or {}
-		@cfg	= cfg
-
-		merge cfg, newCfg # max depth of 2, for objects
-
-		cfg.root = root or cfg.root or lance.rootDir
-
-		stylus		= cfg.stylus
-		coffee		= cfg.coffee
-		ect			= cfg.ect
-		toffee		= cfg.toffee
-		template	= cfg.template
-		
-		stylus.engine	= stylus.engine		or false
-		coffee.engine	= coffee.engine		or require 'coffee-script'
-		toffee.engine	= toffee.engine		or false
-		ect.engine		= ect.engine		or false
-		
-		try if not stylus.engine	and require.resolve 'stylus'	then stylus.engine	= require 'stylus'
-		try if not ect.engine		and require.resolve 'ect'		then ect.engine		= require 'ect'
-		try if not toffee.engine	and require.resolve 'toffee'	then toffee.engine	= require 'toffee'
-
-		# initialize ect
-
+	# initialize ect if it hasnt been
+	if ect
 		if type( ect.engine ) is 'function'
 			if ect.findIn
 				ect.options.root = path.join cfg.root, ect.findIn
@@ -83,257 +43,384 @@ lance.templating = {
 			ect.options.ext	= ect.options.ext or ect.ext
 			ect.engine		= ect.engine ect.options
 
-		ect.ext	= ect.ext or ect.options.ext or ''
+		ect.ext = ect.ext or ect.options.ext or ''
 
-		# initialize toffee
+	if cluster.isMaster
+		if coffee
+			tpl.find.coffee.renderThenWatch()
 
-		if type( toffee.engine ) is 'function'
-			toffee.engine = new( toffee.engine toffee.options )
+		if stylus
+			tpl.find.stylus.renderThenWatch()
 
-		toffee.findIn = path.join cfg.root, toffee.findIn
+	return lance.templating
 
-		@build()
-		@watch() if cluster.isMaster
+tpl.locals = {}
 
-		return true
+# tpl.render
 
-	# merged renders
+tpl.render = -> tpl.render.ect.apply tpl.render, arguments
 
-	addMerged: (mergeCache, fileDir, rendered) ->
-		return false if not fileDir or not rendered?
+tpl.render.ect = (dir, locals = {}, done = ->) ->
+	if not ect
+		return done lance.error(
+			type	: 'notice'
+			scope	: 'lance.tpl.render.ect'
+			error	: new Error 'ECT engine unavaliable'
+		), ''
 
-		# will group filenames like:
-		# (app)-main.coffee, (app)-appendix.coffee		as app.coffee
-		# 1-main.coffee, 1-appendix.coffee				as 1.coffee
-		match = path.basename( fileDir ).match ///
-			^
-			( \d+ | \( [^\)]+ \) )
-			[\-]
-		///i
+	ect.engine.render dir, locals, (err, rendered = '') ->
+		if err
+			return done lance.error(
+				type	: 'notice'
+				scope	: 'lance.tpl.render.ect'
+				error	: err
+			), rendered
 
-		return false if not match or not match[1]
+		if ect.minify and rendered
+			rendered = minify rendered
 
-		if group = match[1]
-			group = group.replace /^\(|\)$/g, '' # trim surrounding round brackets
+		done null, rendered
 
-			if not ( group of mergeCache ) then mergeCache[group] = {}
-			mergeCache[group][fileDir] = rendered
+tpl.render.stylus = (fileDir, done = ->) ->
+	if not stylus
+		return done lance.error(
+			type	: 'notice'
+			scope	: 'lance.tpl.render.stylus'
+			error	: new Error 'Stylus engine unavaliable'
+		), ''
 
-			return true
+	fileDir = resolveDir fileDir
 
-		return false
+	fs.exists fileDir, (exists) =>
+		if not exists
+			return done lance.error(
+				type	: 'notice'
+				scope	: 'lance.tpl.render.stylus fs.exists'
+				error	: new Error "#{fileDir} doesnt exist"
+			), ''
 
-	renderMergedCoffee: ->
-		return false if Function.empty @mergeCache.coffee
+		fs.readFile fileDir, 'utf8', (err, file) =>
+			if err or not file?
+				return done lance.error(
+					type	: 'warning'
+					scope	: 'lance.tpl.render.stylus fs.readFile'
+					error	: new Error "#{fileDir} not readable"
+				), ''
 
-		for groupName, group of @mergeCache.coffee
-			merged	= ''
-			keys	= Object.keys( group ).sort()
+			engine = stylus.engine file
+			engine.set 'paths', [ path.dirname fileDir ]
+			engine.render (err, rendered = '') =>
+				if err
+					return done lance.error(
+						type	: 'warning'
+						scope	: 'lance.tpl.render.stylus stylus.engine.render'
+						error	: err
+					), rendered
 
-			continue if not keys.length
+				if not rendered
+					return done null, ''
 
-			for fileDir in keys
-				rendered = group[fileDir]
+				renderTo	= resolveDir stylus.renderTo
+				ext			= path.extname fileDir
+				name		= path.basename fileDir, ext
 
-				merged += "\n/* #{path.basename fileDir} */"
-				merged += '\n' + rendered + '\n'
+				newFileDir	= path.join renderTo, name + '.css'
 
-			renderTo	= @resolveDir coffee.renderTo
+				if stylus.minify
+					rendered = minifyCss rendered
 
-			newFileDir	= path.join renderTo, "#{groupName}.js"
+				# if it cant be added as a merge group then it will just try to write it alone
+				if not @stylus.merge.add fileDir, rendered
+					fs.writeFile newFileDir, rendered, (err) =>
+						if err
+							return done lance.error(
+								type	: 'warning'
+								scope	: 'lance.tpl.render.stylus stylus.engine.render fs.writeFile'
+								error	: err
+							), rendered
 
-			fs.writeFile newFileDir, merged
+						done null, rendered
+				else
+					@stylus.merge done
 
-		return merged
+tpl.render.coffee = (fileDir, done = ->) ->
+	fileDir = resolveDir fileDir
 
-	renderMergedStylus: ->
-		return false if Function.empty @mergeCache.stylus
+	fs.exists fileDir, (exists) =>
+		if not exists
+			return done lance.error(
+				type	: 'notice'
+				scope	: 'lance.tpl.render.coffee fs.exists'
+				error	: new Error "#{fileDir} doesnt exist"
+			), ''
 
-		for groupName, group of @mergeCache.stylus
-			merged	= ''
-			keys	= Object.keys( group ).sort()
+		fs.readFile fileDir, 'utf8', (err, file) =>
+			if err or not file?
+				return done lance.error(
+					type	: 'warning'
+					scope	: 'lance.tpl.render.coffee fs.readFile'
+					error	: new Error "#{fileDir} not readable"
+				)
 
-			continue if not keys.length
+			rendered	= coffee.engine.compile file
 
-			for fileDir in keys
-				rendered = group[fileDir]
+			if not rendered
+				return done null, ''
 
-				merged += "\n/* #{path.basename fileDir} */"
-				merged += '\n' + rendered + '\n'
-
-			renderTo	= @resolveDir stylus.renderTo
-
-			newFileDir	= path.join renderTo, "#{groupName}.css"
-
-			fs.writeFile newFileDir, merged
-
-		return merged
-
-	# rendering
-
-	renderStylus: (fileDir) ->
-		return false if not stylus.engine
-
-		fileDir = @resolveDir fileDir
-
-		if not fs.existsSync fileDir
-			lance.error 'Notice', 'templating.renderStylus', "'#{fileDir}' doesnt exist; ignoring"
-			return false
-
-		file = fs.readFileSync fileDir, 'utf8'
-
-		if not file?
-			lance.error 'Warning', 'templating.renderStylus', "'#{fileDir}' not readable"
-			return false
-
-		engine = stylus.engine file
-		engine.set 'paths', [ path.dirname fileDir ]
-		engine.render (err, rendered) =>
-			if err
-				lance.error 'Error', 'templating.renderStylus -> stylus.engine.render', err
-				return false
-
-			renderTo	= @resolveDir stylus.renderTo
+			renderTo	= resolveDir coffee.renderTo
 			ext			= path.extname fileDir
 			name		= path.basename fileDir, ext
+			newFileDir	= path.join renderTo, name + '.js'
 
-			newFileDir	= path.join renderTo, name + '.css'
+			if coffee.minify
+				rendered = minifyJs rendered
 
-			if stylus.minify then rendered = String.minifyCss rendered
+			if not @coffee.merge.add fileDir, rendered
+				fs.writeFile newFileDir, rendered, (err) =>
+					if err
+						return done lance.error(
+							type	: 'warning'
+							scope	: 'lance.tpl.render.coffee coffee.engine.render fs.writeFile'
+							error	: err
+						), rendered
 
-			if not ( @addMerged @mergeCache.stylus, fileDir, rendered )
-				fs.writeFile newFileDir, rendered
+					done null, rendered
 			else
-				@renderMergedStylus()
+				@coffee.merge done
+
+# tpl.render.merge
+
+# not called on its own. instead, tpl.render.[coffee|stylus].merge
+# supplies it with mergeCache and a file extension
+tpl.render.merge = (mergeCache, ext, done = ->) ->
+	if empty mergeCache
+		return done null, ''
+
+	for groupName, group of mergeCache
+		merged	= ''
+		keys	= Object.keys( group ).sort()
+
+		continue if not keys.length
+
+		for fileDir in keys
+			rendered = group[fileDir]
+
+			merged += "\n/* #{path.basename fileDir} */\n#{rendered}\n"
+
+		renderTo	= resolveDir coffee.renderTo
+
+		newFileDir	= path.join renderTo, "#{groupName + ext}"
+
+		fs.writeFile newFileDir, merged, (err) ->
+			if err
+				return done lance.error {
+					type	: 'warning'
+					scope	: 'lance.tpl.render.merge fs.writeFile'
+					error	: err
+				}, merged
+
+			done null, merged
+
+tpl.render.stylus.merge = (done = ->) ->
+	tpl.render.merge @merge.cache, '.css', done
+
+tpl.render.coffee.merge = (done = ->) ->
+	tpl.render.merge @merge.cache, '.js', done
+
+tpl.render.stylus.merge.cache = {}
+tpl.render.coffee.merge.cache = {}
+
+tpl.render.stylus.merge.add =
+tpl.render.coffee.merge.add = (fileDir, rendered) ->
+	return false if not fileDir or not rendered?
+
+	# will group filenames like:
+	# (app)-main.coffee, (app)-appendix.coffee		as app.coffee
+	# 1-main.coffee, 1-appendix.coffee				as 1.coffee
+	m = path.basename( fileDir ).match ///
+		^
+		( \d+ | \( [^\)]+ \) )
+		[\-]
+	///i
+
+	if m?[1]
+		console.log 'we gon replace r we?'
+		group = m[1].replace /^\(|\)$/g, '' # trim surrounding round brackets
+
+		if group not of @cache
+			@cache[group] = {}
+
+		@cache[group][fileDir] = rendered
 
 		return true
 
-	renderCoffee: (fileDir) ->
-		fileDir = @resolveDir fileDir
+	return false
 
-		if not fs.existsSync fileDir
-			lance.error 'Notice', 'templating.renderCoffee', "'#{fileDir}' doesnt exist; ignoring"
+# iterates over a directory and its subdirectories
+# when it finds and matches (according to file extensions) then next is called
+tpl.find = (findIn, findExt, next = ->) ->
+	return false if not findIn or not findExt
+
+	if type( findIn ) is 'string'
+		findIn = [findIn]
+
+	for dir in findIn
+		dir = resolveDir dir
+
+		exploreDir dir, (file, fileDir, fileName, name, ext = '') => # NOTE: add err to args
+			matched = isExt ext, findExt
+
+			if matched
+				next file, fileDir, fileName, name, ext = ''
+
+# calls the callback next whenever it finds a matching file
+tpl.find.stylus = (findIn, next = ->) ->
+	return false if not stylus
+
+	findIn = findIn or stylus.findIn
+	tpl.find findIn, stylus.ext, next
+
+# when something is found, watch the fileDir
+tpl.find.stylus.watch = (findIn = '') ->
+	tpl.find.stylus findIn, (file, fileDir) =>
+		tpl.watch.stylus fileDir
+
+# when something is found, render the fileDir
+tpl.find.stylus.render = (findIn = '') ->
+	tpl.find.stylus findIn, (file, fileDir) =>
+		tpl.render.stylus fileDir
+
+# do both in proper order
+tpl.find.stylus.renderThenWatch = (findIn = '') ->
+	tpl.find.stylus findIn, (file, fileDir) =>
+		tpl.render.stylus fileDir
+		tpl.watch.stylus fileDir
+
+tpl.find.coffee = (findIn, next = ->) ->
+	return false if not coffee
+
+	findIn = findIn or coffee.findIn
+	tpl.find findIn, coffee.ext, next
+
+tpl.find.coffee.watch = (findIn = '') ->
+	tpl.find.coffee findIn, (file, fileDir) =>
+		tpl.watch.coffee fileDir
+
+tpl.find.coffee.render = (findIn = '') ->
+	tpl.find.coffee findIn, (file, fileDir) =>
+		tpl.render.coffee fileDir
+
+tpl.find.coffee.renderThenWatch = (findIn = '') ->
+	tpl.find.coffee findIn, (file, fileDir) =>
+		tpl.render.coffee fileDir
+		tpl.watch.coffee fileDir
+
+# NOTE: put these into a single function after they're proven to work to test
+# if the closure will retain pointers to the correct objects, thus remaining DRY
+tpl.watch = {
+	stylus: (fileDir = '') ->
+		return false if not stylus
+
+		{watching, renderedAt} = @stylus
+
+		if watching[fileDir]
 			return false
 
-		file = fs.readFileSync fileDir, 'utf8'
+		fs.watch fileDir, (event) =>
+			return false if event isnt 'change'
+			now		= new Date().getTime()
+			diff	= now - 1000
 
-		if not file?
-			lance.error 'Warning', 'templating.renderCoffee', "'#{fileDir}' not readable"
+			if fileDir of renderedAt and renderedAt[fileDir] > diff
+				return false
+
+			tpl.render.stylus fileDir
+
+			renderedAt[fileDir] = new Date().getTime()
+
+		watching[fileDir] = true
+
+	coffee: (fileDir = '') ->
+		return false if not coffee
+
+		{watching, renderedAt} = @coffee
+		
+		if watching[fileDir]
 			return false
 
-		rendered	= coffee.engine.compile file
+		fs.watch fileDir, (event) =>
+			return false if event isnt 'change'
+			now		= new Date().getTime()
+			diff	= now - 1000
 
-		renderTo	= @resolveDir coffee.renderTo
-		ext			= path.extname fileDir
-		name		= path.basename fileDir, ext
-		newFileDir	= path.join renderTo, name + '.js'
+			if fileDir of renderedAt and renderedAt[fileDir] > diff
+				return false
+			
+			tpl.render.stylus fileDir
 
-		if coffee.minify then rendered = String.minifyJs rendered
+			renderedAt[fileDir] = new Date().getTime()
 
-		if not @addMerged @mergeCache.coffee, fileDir, rendered
-			fs.writeFile newFileDir, rendered
-		else
-			@renderMergedCoffee()
+		watching[fileDir] = true
 
-		return true
+}
 
-	renderToffee: (dir, locals = {}, callback) ->
-		if not toffee.engine then return callback 'Toffee is not loaded', null
+tpl.watch.stylus.watching = {}		# { fileDir: true } to know whether fileDir is already being watched
+tpl.watch.stylus.renderedAt = {}	# { fileDir: ms } for limiting re-rendering frequency
+tpl.watch.coffee.watching = {}
+tpl.watch.coffee.renderedAt = {}
 
-		# throw in __toffee options to specify the right dir path
-		locals.__toffee	= locals.__toffee or {}
-		if toffee.findIn then locals.__toffee.dir = locals.__toffee.dir or toffee.findIn
+resolveDir = (dir = '', root = '') ->
+	if isAbsolute dir
+		return dir
+	else
+		return path.join root or cfg.root, dir
 
-		# make sure it has [a / the right] extension
-		if toffee.ext then dir = changeExt dir, toffee.ext
-
-		toffee.engine.render dir, locals, (err, rendered) ->
-			if toffee.minify then rendered = String.minify rendered
-
-			callback err, rendered
-
-		return true
-
-	renderEct: (dir, locals = {}, callback) ->
-		if not ect.engine then return callback 'Ect is not loaded', null
-
-		ect.engine.render dir, locals, (err, rendered) ->
-			if ect.minify then rendered = String.minify rendered
-
-			callback err, rendered
-
-		return true
+### unused atm
 
 	renderTemplate: (fileDir, locals = {}, callback) ->
 		if not template.engine then callback 'Template engine invalid', null
 
-		fileDir = @resolveDir fileDir
+		fileDir = resolveDir fileDir
 
-		if not fileDir of @templates.compiled
-			@compileTemplate fileDir, locals
+		if not fileDir of tpl.templates.compiled
+			tpl.compileTemplate fileDir, locals
 
-		compiled = @templates.compiled[fileDir]
+		compiled = tpl.templates.compiled[fileDir]
 		rendered = compiled locals
 
 		if template.minify then rendered = String.minify rendered
 
 		callback null, rendered
 
-	# compiling
-
 	compileTemplate: (fileDir, locals = {}) ->
 		return false if not template.engine
 
-		fileDir = @resolveDir fileDir
+		fileDir = resolveDir fileDir
 
-		if not fileDir of @templates.files
+		if not fileDir of tpl.templates.files
 			return lance.error 'Warning', 'templating.compileTemplate', "'#{fileDir}' is not loaded"
 
-		file = @templates.files[fileDir]
+		file = tpl.templates.files[fileDir]
 
 		compiled = template.engine.compile file, locals
 
-		@templates.compiled[fileDir] = compiled
+		tpl.templates.compiled[fileDir] = compiled
 
 		return compiled
 
-	# watching
-	watchStylus: (fileDir) ->
-		if not @watching.stylus[fileDir]
-			fs.watch fileDir, (event) =>
-				return false if event isnt 'change'
-
-				@renderStylus fileDir
-
-			@watching.stylus[fileDir] = true
-
-	watchCoffee: (fileDir) ->
-		if not @watching.coffee[fileDir]
-			fs.watch fileDir, (event) =>
-				return false if event isnt 'change'
-
-				@renderCoffee fileDir
-
-				@watching.coffee[fileDir] = true
-
 	watchTemplates: (fileDir) ->
-		if not @watching.templates[fileDir]
+		if not tpl.watching.templates[fileDir]
 			fs.watch fileDir, (event) =>
 				return false if event isnt 'change'
 
-				@compileTemplate fileDir
+				tpl.compileTemplate fileDir
 
-				@watching.templates[fileDir] = true
-
-	# build/watch directory iteration and cumulative commands
-
-	watch			: -> @build true, false
-	buildAndWatch	: -> @build true, true
+				tpl.watching.templates[fileDir] = true
 
 	build: (doWatch = false, doBuild = true) ->
 		args = [stylus.findIn, coffee.findIn, template.findIn]
 
-		if doBuild then @mergeCache = clone defaultMergeCache # cleans the mergeCache out
+		if doBuild then tpl.mergeCache = clone defaultMergeCache # cleans the mergeCache out
 
 		for arg in args
 			continue if not arg
@@ -343,7 +430,7 @@ lance.templating = {
 			done = []
 
 			for dir in arg
-				dir = @resolveDir dir
+				dir = resolveDir dir
 
 				if dir in done
 					continue
@@ -352,23 +439,19 @@ lance.templating = {
 
 				exploreDir dir, (file, fileDir, fileName, name, ext) =>
 					if isExt ext, stylus.ext
-						@renderStylus fileDir		if doBuild
-						@watchStylus fileDir		if doWatch
+						tpl.renderStylus fileDir		if doBuild
+						tpl.watchStylus fileDir		if doWatch
 
 					if isExt ext, coffee.ext
-						@renderCoffee fileDir		if doBuild
-						@watchCoffee fileDir		if doWatch
+						tpl.renderCoffee fileDir		if doBuild
+						tpl.watchCoffee fileDir		if doWatch
 
 					if isExt ext, template.ext
-						@templates.files[fileDir] = file
+						tpl.templates.files[fileDir] = file
 
-						@compileTemplate fileDir	if doBuild
-						@watchTemplates fileDir		if doWatch
+						tpl.compileTemplate fileDir	if doBuild
+						tpl.watchTemplates fileDir		if doWatch
 
 		return true
-}
 
-defaultMergeCache = clone lance.templating.mergeCache
-
-lance.templating.render = lance.templating.renderEct
-
+###
