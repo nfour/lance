@@ -6,8 +6,7 @@
    /_/\__/_/_/ /_/\___/\___/            
    
 ```
-Lance, a minimal flavor of a node web framework.
-
+Lance, another flavor on a minimal node web framework.
 ```coffee
 cfg   = require './cfg'
 lance = require 'lance'
@@ -20,9 +19,6 @@ server.listen '1337'
 lance.router.GET '/:page(about|contact)', 'paging', (req, res) -> res.serve "pages/#{req.route.path.page}"
 lance.router.GET '/', 'home', (req, res) -> res.serve 'home'
 ```
-
-### What Lance does
-
 Lance contains functionality for:
 - Routing and request parsing
 - Automated Stylus, CoffeeScript, css, js rendering, watching, merging, minifying
@@ -30,7 +26,7 @@ Lance contains functionality for:
 
 Basically, web server essentials.
 
-Additionally; error handling, optional compression, utility functions, cookie integration, some other stuff
+Additionally; error handling, compression, utility functions, cookies
 
 ### API
 Lance is governed by a single config object that you feed it on initialization.
@@ -45,7 +41,8 @@ See `/cfg/lance.coffee` for the default config.
 Lance makes a request's response functionality avaliable via the extension of the `req` and `res` http variables supplied to new requests. `res` and `req` does not need to be passed to any of these functions.
 
 ```coffee
-# With route pattern '/:page(about|contact)' (as defined in the example above) matching the url path '/about?foo=bar'
+# Imagine a url path: '/about?foo=bar'
+# Matching route pattern: '/:page(about|contact)' (as defined in the example above)
 
 ### request extensions ###
 
@@ -79,10 +76,10 @@ optionsObject = {
     template : '' # An alias to 'view'. Either is valid
     data     : {} # contains data that will passed to templates/views
 }
-res.serve = (optionsObject or viewPathString) ->
+res.serve = (optionsObject_or_viewPathString) ->
 
 # Serves an object or string as json with the correct headers
-res.serve.json = (jsonObjectOrString) ->
+res.serve.json = (jsonObject_or_jsonString) ->
 
 # Redirects to the specified path
 res.serve.redirect = (pathString) ->
