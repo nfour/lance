@@ -2,23 +2,19 @@
 path	= require 'path'
 cluster	= require 'cluster'
 fs		= require 'fs'
-Keygrip = require 'keygrip'
 
-require './functions' # exends natives, making functions avaliable
-
-{clone, merge} = Object
-{type} = Function
-
-defaultCfg = require '../cfg/lance'
 
 module.exports	=
 lance			= (newCfg = {}) ->
-	lance.cfg		= merge clone( defaultCfg ), newCfg
+	lance.cfg		= merge lance.cfg, newCfg
 	lance.rootDir	= lance.cfg.root or path.dirname require.main.filename
 
-	lance.templating lance.cfg.templating or {}
+	lance.templating lance.cfg.templating
 
-	lance.keygrip = Keygrip lance.cfg.keygripKeys
+	try Keygrip = require('keygrip') or false
+
+	if Keygrip
+		lance.requestHandler.keygrip = Keygrip lance.cfg.keygripKeys
 	
 	if lance.cfg.ascii and cluster.isMaster
 		console.log """
@@ -30,77 +26,86 @@ lance			= (newCfg = {}) ->
 			\                              
 		"""
 
-	if lance.cfg.catchUncaughtErrors
+	if lance.cfg.catchUncaught
 		process.on 'uncaughtException', (err) ->
 			lance.error {
 				type: 'uncaught'
 				error: err
 			}
-
+	
 	return lance
 
+lance.cfg = require '../cfg/lance'
+
 lance.error = () ->
-	if type( arguments[0] ) is 'object'
-		opt = arguments[0]
+	error = lance.error.parse arguments
+
+	console.error error.text
+	lance.error.write error
+
+	if error.severity is 'Fatal'
+		process.kill()
+
+	return error
+
+lance.error.parse = (args) ->
+	if typeOf( args[0] ) is 'object'
+		opt = args[0]
 	else
-		if arguments[0] instanceof Error
-			opt = { error: arguments[0] }
+		if args[0] instanceof Error
+			opt = { error: args[0] }
 		else
-			opt = { type: arguments[0], error: arguments[1] }
+			opt = { type: args[0], error: args[1] }
 
-	opt.type = opt.type or 'warning'
-
-	if		opt.type.match /^notice/i
-		errType = 'Notice'
-	else if opt.type.match /^warn/i
-		errType = 'Warning'
-	else if opt.type.match /^(err|fatal)/i
-		errType = 'Fatal'
-	else if opt.type.match /^(uncaught)/i
-		errType = 'Uncaught'
-	else
-		errType = 'Error'
-
+	type	= opt.type or 'warning'
 	scope	= opt.scope or ''
-	error	= opt.error or ''
+	error	= opt.error or 'Error'
 
 	if error not instanceof Error
-		error = new Error 'Unknown'
+		error = new Error error
 
 	msg = error.message or ''
 
+	if		type.match /^notice/i
+		error.severity = 'notice'
+
+	else if type.match /^warn/i
+		error.severity = 'warning'
+
+	else
+		error.severity = 'fatal'
+
 	for fatalType in [EvalError, TypeError, SyntaxError, ReferenceError]
 		if error instanceof fatalType
-			errType = 'Fatal'
-
+			error.severity = 'fatal'
+		
 	if scope
-		errStr = "[ #{errType} ] [ #{scope} ] #{msg}"
+		error.text = "[ #{error.severity} ] [ #{scope} ] #{msg}"
 	else
-		errStr = "[ #{errType} ] #{msg}"
+		error.text = "[ #{error.severity} ] #{msg}"
 
-	if errType.match /^(uncaught|fatal|err)/i
-		errStr += '\n' + error.stack
+	if error.severity is 'fatal'
+		error.text += '\n' + error.stack
 
-	console.error errStr
+	return error
 
-	lance.error.write errStr
+lance.error.write = (error, rootDir = lance.rootDir) ->
+	if rootDir
+		logPath	= path.join rootDir, '/error.log'
+		errorBlock = "/err/#{new Date().toString()} #{error.text}\n"
 
-	return new Error
-
-lance.error.write = (errStr) ->
-	if lance.rootDir
-		logPath	= lance.rootDir + '/error.log'
-		line	= new Date().toString() + ' - ' + errStr + '\n'
-
-		fs.appendFile logPath, line
+		fs.appendFile logPath, errorBlock
 
 lance.init		= lance
 lance.session	= { server: {} }
 
+require './utils'
+{clone, merge, typeOf} = lance.utils
+
 require './router'
 require './templating'
 require './server'
-require './respond'
+
 
 module.exports = lance
 

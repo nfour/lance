@@ -1,18 +1,21 @@
 {
-	"name"			: "lance",
-	"version"		: "0.8.0",
-	"author"		: "TurtlePie [ github.com/TurtlePie ]",
-	"description"	: "A sharp Node.js web framework",
-	"main"			: "./index",
-	"dependencies": {
-		"coffee-script"	: ">= 1.5.x",
-		"ect"			: ">= 0.4.x",
-		"keygrip"		: ">= 0.2.2",
-		"cookies"		: ">= 0.3.5",
-		"stylus"		: ">= 0.32.x"
-	},
-	"repository" : {
-		"type" : "git",
-		"url" : "https://github.com/nfour/lance"
+	"name"			: "lance"
+,	"version"		: "0.12.0"
+,	"author"		: "nfour [ github.com/nfour ]"
+,	"description"	: "A sharp Node.js web framework"
+,	"main"			: "./index"
+
+,	"dependencies": {
+		"coffee-script"	: "1.6.x"
+	,	"ect"			: "0.4.x"
+	,	"keygrip"		: "0.2.x"
+	,	"cookies"		: "0.3.x"
+	,	"stylus"		: "0.32.x"
+	,	"uglify-js"		: "2.2.x"
+	}
+
+,	"repository": {
+		"type"	: "git"
+	,	"url"	: "https://github.com/nfour/lance"
 	}
 }

@@ -115,11 +115,3 @@ Other than that, just look through the code yourself. While it's not commented, 
 For templating, ECT is supported. Consolodate.js may be a good idea to support should anyone but myself decide to use this code.
 
 And that's about it.
-
-
-
-
-
-
-
-

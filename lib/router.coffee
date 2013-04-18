@@ -1,14 +1,7 @@
 
-require './functions'
-
-{clone, merge, toArray}	= Object
-{type} = Function
-
 lance = require './lance'
 
-cfg = {
-	index: true
-}
+{clone, merge, typeOf, toArray}	= lance.utils
 
 defaultResult = {
 	path		: {}
@@ -18,82 +11,113 @@ defaultResult = {
 	pattern		: ''
 }
 
-router = {
-	routes		: {
-		get		: []
-		post	: []
-		put		: []
-		head	: []
-		trace	: []
-		delete	: []
-		connect	: []
-		options	: []
-	}
-
-	namedRoutes	: {}
-	indexes		: {
-		get		: {}
-		post	: {}
-		put		: {}
-		head	: {}
-		trace	: {}
-		delete	: {}
-		connect	: {}
-		options	: []
-	}
-	
+router			=
+lance.router	= {
 	add: (method, pattern, name, callback) ->
 		keys	= []
 		regex	= pattern
 		
-		if type( regex ) is 'string'
-			regex = @patternToRegex pattern, keys
+		if typeof regex is 'string'
+			regex = router.patternToRegex pattern, keys
 		
 		pattern = pattern.toString()
 		
 		route = {
-			name		: name or ''
-			callback	: callback or false
+			name: name or ''
+			callback
 			regex
 			pattern
 			keys
 		}
 		
-		@routes[method].push route
+		router.routes[method].push route
 
 		# TODO: extend namedRoutes to be all arrays, or only arrays when there are two items
-		@namedRoutes[name or pattern] = route
+		router.namedRoutes[name or pattern] = route
 
 		return route
-	
-	match: (method, urlPath) ->
+
+	route: (method, patterns, name = '', callback = false) ->
+		return false if not patterns or not method
+
+		method = method.toLowerCase()
+
+		if method not of router.routes
+			lance.error {
+				type	: 'warning'
+				scope	: 'lance.router.add'
+				error	: new Error "#{method} method is unsupported/invalid"
+			}
+			return false
+
+		args = toArray arguments
+		
+		if returnFirst = typeof patterns is 'string'
+			patterns = [ patterns ]
+		
+		# allows for name and callback to be either a string or function
+		if typeOf( args[1] ) is 'function'
+			callback	= args[1]
+			name		= ''
+
+		if typeof args[2] is 'string'
+			name = args[2]
+				
+		results = []
+		for pattern in patterns
+			results.push router.add method, pattern, name, callback
+
+		if returnFirst
+			return results[0]
+		else
+			return results
+
+	match: (urlPath = '', method = 'get') ->
+		if not urlPath or typeof urlPath isnt 'string'
+			lance.error {
+				type	: 'warning'
+				scope	: 'lance.router.match'
+				error	: new Error "#{urlPath} urlPath is invalid"
+			}
+			return defaultResult
+
+		method = method.toLowerCase()
+
+		if method not of router.routes
+			lance.error {
+				type	: 'warning'
+				scope	: 'lance.router.match'
+				error	: new Error "'#{method}' method is unsupported/invalid"
+			}
+			return defaultResult
+
 		# if the path has been routed before and is thus indexed we can skip processing
-		if cfg.index and urlPath of @indexes
-			return @indexes[method][urlPath]
+		if lance.cfg.router.cache and urlPath of router.indexes
+			return indexes[method][urlPath]
 				
 		# process a result
-		for route in @routes[method]
+		for route in router.routes[method]
 			path	= {}
 			splats	= []
 			
-			captures = route.regex.exec urlPath
+			captures = urlPath.match route.regex
 
 			continue if not captures or captures.length < 1
 			
 			captures = captures[1..]
 			
-			for _val, _key in captures
-				varName = route.keys[_key] or ''
+			for val, key in captures
+				varName = route.keys[key] or ''
 				
-				_val = decodeURIComponent _val.toString()
+				val = decodeURIComponent val.toString()
 				
 				if varName
-					path[varName] = _val
+					path[varName] = val
 				else
-					splats.push _val
+					splats.push val
 
 			result = {
-				routes		: @namedRoutes
+				routes		: router.namedRoutes
 				path		: path
 				splats		: splats
 				name		: route.name
@@ -103,13 +127,13 @@ router = {
 			}
 			
 			# index the route
-			if cfg.index
-				@indexes[method][urlPath] = result
+			if lance.cfg.router.cache
+				router.indexes[method][urlPath] = result
 
 			return result
 
 		return defaultResult
-			
+
 	patternToRegex: (pattern, keys) ->
 		pattern = pattern
 			.concat('/?')
@@ -152,65 +176,18 @@ router = {
 			)
 
 		return new RegExp "^#{pattern}$", 'i'
+
+	routes		: {}
+	namedRoutes	: {}
+	indexes		: {}
 }
 
-lance.router = {
-	cfg: cfg
-	
-	add: (method, patterns, name = '', callback = false) ->
-		return false if not patterns or not method
+for _method in ['get', 'post', 'head', 'put', 'delete', 'trace', 'connect', 'options']
+	do (_method) ->
+		router[_method]					=
+		router[_method.toUpperCase()]	= (patterns, name, callback = ->) ->
+			router.route _method, patterns, name, callback
 
-		method = method.toLowerCase()
+	router.routes[_method] = []
+	router.indexes[_method] = {}
 
-		if method not of router.routes
-			lance.error 'Warning', 'router.add', "'#{method}' method is unsupported/invalid"
-			return false
-
-		args = toArray arguments
-		
-		if returnFirst = type( patterns ) isnt 'array'
-			patterns = [ patterns ]
-		
-		# allows for name and callback to be either a string or function
-		if type( args[1] ) is 'function'
-			callback	= args[1]
-			name		= ''
-
-		if type( args[2] ) is 'string'
-			name = args[2]
-				
-		results = []
-		for pattern in patterns
-			results.push( router.add method, pattern, name, callback )
-
-		if returnFirst
-			return results[0]
-		else
-			return results
-
-	get		: (patterns, name, callback) -> @add 'get'		, patterns, name, callback
-	post	: (patterns, name, callback) -> @add 'post'		, patterns, name, callback
-	head	: (patterns, name, callback) -> @add 'head'		, patterns, name, callback
-	put		: (patterns, name, callback) -> @add 'put'		, patterns, name, callback
-	delete	: (patterns, name, callback) -> @add 'delete'	, patterns, name, callback
-	trace	: (patterns, name, callback) -> @add 'trace'	, patterns, name, callback
-	connect	: (patterns, name, callback) -> @add 'connect'	, patterns, name, callback
-	options	: (patterns, name, callback) -> @add 'options'	, patterns, name, callback
-
-	match: (urlPath = '', method) ->
-		if not urlPath or type( urlPath ) isnt 'string'
-			lance.error 'Warning', 'router.match', "'#{urlPath}' urlPath is invalid"
-			return defaultResult
-
-		method = method.toLowerCase()
-
-		if method not of router.routes
-			lance.error 'Warning', 'router.match', "'#{method}' method is unsupported/invalid"
-			return defaultResult
-
-		return router.match method, urlPath
-	
-	routes		: router.routes
-	namedRoutes	: router.namedRoutes
-	indexes		: router.indexes
-}

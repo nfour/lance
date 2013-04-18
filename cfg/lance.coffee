@@ -1,12 +1,17 @@
 
 module.exports = {
-	ascii: true # displays ascii art for lance at startup
-	catchUncaughtErrors: true # catches any uncaught errors into lance.error()
+	ascii			: true # displays ascii art for lance at startup
+	catchUncaught	: true # catches any uncaught errors into lance.error()
 
 	keygripKeys: ['Wwavifkuiv7C5JFNCDTiyD6U1RGxz48f'] # used for encoding cookies
+	
+	router	: {
+		cache: true
+	}
 
 	templating: {
 		root	: ''
+
 
 		ect: {
 			engine	: undefined
@@ -25,21 +30,43 @@ module.exports = {
 		}
 
 		stylus: {
-			ext		: '.styl'
-			engine	: undefined
-			renderTo: 'static'
-			findIn	: ''
-			options	: {}
-			minify	: true
+			ext			: '.styl'
+			engine		: undefined
+			renderTo	: 'static'
+			findIn		: ''
+			options		: {}
+			minify		: true
+			watch		: true
+			inherit		: true
 		}
 		
 		coffee: {
-			ext		: '.coffee'
-			engine	: undefined
-			renderTo: 'static'
-			findIn	: ''
-			options	: {}
-			minify	: true
+			ext			: '.coffee'
+			engine		: undefined
+			renderTo	: 'static'
+			findIn		: ''
+			options		: {}
+			minify		: true
+			watch		: true
+			inherit		: true
+		}
+
+		css: {
+			minify			: true
+			ext				: '.css'
+			renderTo		: ''
+			findIn			: ''
+			watch			: true
+			inherit			: true 
+		}
+
+		js: {
+			minify			: true
+			ext				: '.js'
+			renderTo		: ''
+			findIn			: ''
+			watch			: true
+			inherit			: true
 		}
 	}
 
