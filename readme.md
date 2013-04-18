@@ -3,8 +3,8 @@
       / /___ _____  ________  
      / / __ `/ __ \/ ___/ _ \ 
     / / /_/ / / / / /__/  __/ 
-   /_/\__/_/_/ /_/\___/\___/  
-                              
+   /_/\__/_/_/ /_/\___/\___/            
+   
 ```
 Lance, a minimal flavor of a node web framework.
 
@@ -21,7 +21,7 @@ lance.router.GET '/:page(about|contact)', 'paging', (req, res) -> res.serve "pag
 lance.router.GET '/', 'home', (req, res) -> res.serve 'home'
 ```
 
-### What it does
+### What Lance does
 
 Lance contains functionality for:
 - Routing and request parsing
@@ -42,7 +42,7 @@ lance cfg # Initiated
 
 See `/cfg/lance.coffee` for the default config.
 
-Lance makes a request's response functionality avaliable via the extension of the `req` and `res` http variables supplied to new requests. `res` and `req` does not need to be passed to any of these functions as they're inside closures with said variables avaliable already.
+Lance makes a request's response functionality avaliable via the extension of the `req` and `res` http variables supplied to new requests. `res` and `req` does not need to be passed to any of these functions.
 
 ```coffee
 # With route pattern '/:page(about|contact)' (as defined in the example above) matching the url path '/about?foo=bar'
