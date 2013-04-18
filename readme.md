@@ -21,7 +21,7 @@ lance.router.GET '/:page(about|contact)', 'paging', (req, res) -> res.serve "pag
 lance.router.GET '/', 'home', (req, res) -> res.serve 'home'
 ```
 
-## What?
+### What it does
 
 Lance contains functionality for:
 - Routing and request parsing
