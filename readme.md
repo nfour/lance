@@ -30,6 +30,7 @@ Additionally; error handling, compression, utility functions, cookies
 
 ### API
 Lance is governed by a single config object that you feed it on initialization.
+The idea is to supply said config then to barely have to touch Lance again.
 
 ```coffee
 cfg = require './cfg/lance' # Exports the config object
