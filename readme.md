@@ -16,21 +16,25 @@ lance cfg
 server = lance.createServer()
 server.listen '1337'
 
-lance.router.GET '/:page(about|contact)', 'paging', (req, res) -> res.serve "pages/#{req.route.path.page}"
-lance.router.GET '/', 'home', (req, res) -> res.serve 'home'
+lance.router.GET '/:page(about|contact)', 'paging', (req, res) ->
+    res.serve "pages/#{req.route.path.page}"
+  
+lance.router.GET '*', (req, res) ->
+    res.serve.code 400
 ```
-Lance contains functionality for:
-- Routing and request parsing
-- Automated Stylus, CoffeeScript, css, js rendering, watching, merging, minifying
-- Templating
+Lance handles:
+- Routing
+- Request parsing
+- Cookies
+- Templating (CSS, JS, Stylus, CoffeeScript, ECT)
+- Automation of finding, rendering, watching, merging and minifying templating assets
 
-Basically, web server essentials.
-
-Additionally; error handling, compression, utility functions, cookies
+Basically, web server basics.
+Additionally; error handling, compression, utility functions
 
 ### API
 Lance is governed by a single config object that you feed it on initialization.
-The idea is to supply said config then to barely have to touch Lance again.
+The idea is to supply said config then to barely have to touch Lance again beyond defining routing and starting the server.
 
 ```coffee
 cfg = require './cfg/lance' # Exports the config object
