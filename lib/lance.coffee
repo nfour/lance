@@ -41,9 +41,9 @@ lance.error = () ->
 	error = lance.error.parse arguments
 
 	console.error error.text
-	lance.error.write error
+	lance.error.write error.text
 
-	if error.severity is 'Fatal'
+	if error.severity is 'fatal'
 		process.kill()
 
 	return error
@@ -89,10 +89,10 @@ lance.error.parse = (args) ->
 
 	return error
 
-lance.error.write = (error, rootDir = lance.rootDir) ->
+lance.error.write = (text, rootDir = lance.rootDir) ->
 	if rootDir
 		logPath	= path.join rootDir, '/error.log'
-		errorBlock = "/err/#{new Date().toString()} #{error.text}\n"
+		errorBlock = "/err/#{new Date().toString()} #{text}\n"
 
 		fs.appendFile logPath, errorBlock
 
