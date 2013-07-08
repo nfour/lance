@@ -51,13 +51,14 @@ Lance makes a request's response functionality avaliable via the extension of th
 
 ### request extensions ###
 
-req.res   = res
-req.route = {
+req.res     = res
+req.cookies = [Cookies Object]
+req.route   = {
     path     : { page: 'about' }
     splats   : []
     name     : 'paging'
     callback : ->
-    pattern  : ''
+    pattern  : '/:page(about|contact)'
 }
 
 # The fallback callback for all routes
@@ -68,7 +69,8 @@ req.POST = {}
 
 ### response extensions ###
 
-res.req = req
+res.req     = req
+res.cookies = [Cookies Object]
 
 # A function for serving a template or body
 # Default values for the optionsObject are:

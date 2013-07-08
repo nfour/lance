@@ -17,9 +17,11 @@ js		= undefined
 tpl					=
 lance.tpl			=
 lance.templating	= (newCfg = {}) ->
-	cfg = merge clone( lance.cfg.templating ), newCfg
+	cfg = merge clone( lance.cfg.tpl or lance.cfg.templating ), newCfg
 
-	cfg.root = cfg.root or lance.rootDir
+	cfg.rootDir = cfg.rootDir or lance.rootDir
+
+	tpl.locals = cfg.locals if cfg.locals
 
 	{stylus, coffee, ect, css, js} = cfg
 	
@@ -36,9 +38,9 @@ lance.templating	= (newCfg = {}) ->
 	if ect.engine
 		if typeOf( ect.engine ) is 'function'
 			if ect.findIn and typeof ect.findIn is 'string'
-				ect.options.root = path.join cfg.root, ect.findIn
+				ect.options.root = path.join cfg.rootDir, ect.findIn
 			else
-				ect.options.root = ect.options.root or cfg.root
+				ect.options.root = ect.options.root or cfg.rootDir
 
 			ect.options.ext	= ect.options.ext or ect.ext
 			ect.engine		= ect.engine ect.options
@@ -90,6 +92,7 @@ lance.templating	= (newCfg = {}) ->
 
 tpl.locals = {}
 
+# change this so that it works with consolodate.js instead of just going to ECT
 tpl.render = -> tpl.render.ect.apply tpl.render, arguments
 
 tpl.render.ect = (dir, locals = {}, done = ->) ->
@@ -263,7 +266,7 @@ tpl.render.js = (fileDir, done = ->) ->
 		newFileDir	= path.join renderTo, name + js.ext
 
 		if js.minify
-			if result = uglifyJs.minify file, { fromString: true }
+			if result = uglifyJs.minify file, { fromString: true, mangle: false }
 				file = result.code
 
 		if not @js.merge.add fileDir, file
@@ -305,7 +308,7 @@ tpl.render.coffee = (fileDir, done = ->) ->
 		newFileDir	= path.join renderTo, name + '.js'
 
 		if coffee.minify
-			if result = uglifyJs.minify rendered, { fromString: true }
+			if result = uglifyJs.minify rendered, { fromString: true, mangle: false }
 				rendered = result.code
 
 		if not @js.merge.add fileDir, rendered
@@ -507,14 +510,14 @@ tpl.watch = (fileDir) ->
 		return false if event isnt 'change'
 
 		now		= new Date().getTime()
-		diff	= now - 500
+		diff	= now - 600
 
 		if fileDir of renderedAt and renderedAt[fileDir] > diff
 			return false
 
 		# has to be a timeout because fs.watch goes off twice, and the file
 		# can be saved to in multiple parts, calling event change many times
-		setTimeout (-> render.apply tpl.render, [fileDir]), 450
+		setTimeout (-> render.apply tpl.render, [fileDir]), 550
 
 		renderedAt[fileDir] = new Date().getTime()
 

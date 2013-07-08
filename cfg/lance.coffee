@@ -9,9 +9,22 @@ module.exports = {
 		cache: true
 	}
 
-	templating: {
-		root	: ''
+	server: {
+		workerLimit	: 99
+		port		: 80
+		host		: '127.0.0.1'
+		socket		: ''
+		socketPerms	: 0o0666
+		method		: 'port'
+		requestCb	: false
+	}
 
+	rootDir: ''
+	
+	tpl: {
+		rootDir	: ''
+
+		locals: {}
 
 		ect: {
 			engine	: undefined

@@ -1,6 +1,6 @@
 {
 	"name"			: "lance"
-,	"version"		: "0.12.1"
+,	"version"		: "0.13.4"
 ,	"author"		: "nfour [ github.com/nfour ]"
 ,	"description"	: "A sharp Node.js web framework"
 ,	"main"			: "./index"

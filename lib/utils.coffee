@@ -45,6 +45,15 @@ utils			= {
 			regex	= /\.[^\.]+$/
 
 		return fileDir.match regex
+
+	isUrl: (str = '') ->
+		return str.match ///^
+			(
+				(ht|f)tps?\://
+			|	www\.
+			)
+			[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(/\S*)?
+		///
 	
 	# Dertermines if a string matches as an absolute directory
 	isAbsolute: (fileDir) ->

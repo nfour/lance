@@ -6,10 +6,11 @@ fs		= require 'fs'
 
 module.exports	=
 lance			= (newCfg = {}) ->
+	lance.initiated = true
 	lance.cfg		= merge lance.cfg, newCfg
-	lance.rootDir	= lance.cfg.root or path.dirname require.main.filename
+	lance.rootDir	= lance.cfg.rootDir or path.dirname require.main.filename
 
-	lance.templating lance.cfg.templating
+	lance.templating lance.cfg.tpl or lance.cfg.templating
 
 	try Keygrip = require('keygrip') or false
 

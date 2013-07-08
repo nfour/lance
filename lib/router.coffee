@@ -22,8 +22,10 @@ lance.router	= {
 		
 		pattern = pattern.toString()
 		
+		index = router.routes[method].length + 1
+
 		route = {
-			name: name or ''
+			name: name or index
 			callback
 			regex
 			pattern
@@ -37,7 +39,7 @@ lance.router	= {
 
 		return route
 
-	route: (method, patterns, name = '', callback = false) ->
+	route: (method, patterns, name = '', callback = ->) ->
 		return false if not patterns or not method
 
 		method = method.toLowerCase()
@@ -56,13 +58,10 @@ lance.router	= {
 			patterns = [ patterns ]
 		
 		# allows for name and callback to be either a string or function
-		if typeOf( args[1] ) is 'function'
-			callback	= args[1]
+		if typeOf( args[2] ) is 'function'
+			callback	= args[2]
 			name		= ''
 
-		if typeof args[2] is 'string'
-			name = args[2]
-				
 		results = []
 		for pattern in patterns
 			results.push router.add method, pattern, name, callback
