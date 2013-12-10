@@ -1,8 +1,8 @@
 
 module.exports = {
-	ascii			: true # displays ascii art for lance at startup
+	ascii			: false # displays ascii art for lance at startup
 	catchUncaught	: true # catches any uncaught errors into lance.error()
-
+	compress		: false
 	keygripKeys: ['Wwavifkuiv7C5JFNCDTiyD6U1RGxz48f'] # used for encoding cookies
 	
 	router	: {
@@ -10,13 +10,15 @@ module.exports = {
 	}
 
 	server: {
-		workerLimit	: 99
+		cluster		: null # null, true, false
+		workers		: 99 # if 1 or less, will not use the cluster unless cluster is set to true
 		port		: 80
 		host		: '127.0.0.1'
 		socket		: ''
 		socketPerms	: 0o0666
 		method		: 'port'
 		requestCb	: false
+		maxSockets	: 20
 	}
 
 	rootDir: ''
@@ -25,7 +27,8 @@ module.exports = {
 		rootDir	: ''
 
 		locals: {}
-
+		watchChangeWait: 1500 # Waits this long after each change event before saving
+		watchInterval: 2000 # After each change event, wait this long before acknowledging any more for this file
 		ect: {
 			engine	: undefined
 			ext		: '.ect'

@@ -8,19 +8,26 @@
 ```
 Lance, another flavor on a minimal node web framework.
 ```coffee
-cfg   = require './cfg'
-lance = require 'lance'
+cfg   = require('./cfg')
+lance = require('lance')
 
-lance cfg
+lance(cfg) # Initiates Lance with the config object
 
-server = lance.createServer()
-server.listen '1337'
+# Starts the server and listens on previously configured port/socket
+# Depending on config, will start either cluster or normal server
+lance.start()
 
-lance.router.GET '/:page(about|contact)', 'paging', (req, res) ->
+lance.router.GET('/:page(about|contact)', 'paging', (req, res) ->
     res.serve "pages/#{req.route.path.page}"
-  
-lance.router.GET '*', (req, res) ->
+)
+
+lance.router.GET('*', (req, res) ->
     res.serve.code 400
+)
+
+lance.on('listening',->
+    console.log 'listening!'
+)
 ```
 Lance handles:
 - Routing
@@ -30,18 +37,18 @@ Lance handles:
 - Automation of finding, rendering, watching, merging and minifying templating assets
 
 Basically, web server basics.
-Additionally; error handling, compression, utility functions
+Additionally; error handling, compression, utility functions, while being fast.
 
 ### API
 Lance is governed by a single config object that you feed it on initialization.
 The idea is to supply said config then to barely have to touch Lance again beyond defining routing and starting the server.
 
 ```coffee
-cfg = require './cfg/lance' # Exports the config object
-lance cfg # Initiated
+cfg = require('./cfg/lance') # Exports the config object
+lance(cfg) # Initiated
 ```
 
-See `/cfg/lance.coffee` for the default config.
+See `/cfg.coffee` for the default config.
 
 Lance makes a request's response functionality avaliable via the extension of the `req` and `res` http variables supplied to new requests. `res` and `req` does not need to be passed to any of these functions.
 
@@ -116,4 +123,23 @@ Other than that, just look through the code yourself. While it's not commented, 
 
 For templating, ECT is supported. Consolodate.js may be a good idea to support should anyone but myself decide to use this code.
 
-And that's about it.
+### Events
+
+All events contain appropriate modifiable objects for arguments. You can change properties to modify events.
+
+
+- `respond` with `(options Object) ->`
+- `serve` Right after res.serve is called. `(options Object) ->`
+- `serve.json`, `serve.redirect`, `serve.code` Same as above, but with `(arguments Object) ->`
+- `request` with `(res Object, req Object) ->`
+- `listening` On server listening event
+
+```coffee
+
+lance.on('serve', (options) ->
+    if options.data.goHome
+        options.view = 'home'
+)
+```
+
+In the above, the serve event still hasnt actually rendered anything thus the view can be changed.

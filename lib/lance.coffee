@@ -2,55 +2,76 @@
 path	= require 'path'
 cluster	= require 'cluster'
 fs		= require 'fs'
-
+Emitter	= require('eventemitter2').EventEmitter2
+require 'colors'
 
 module.exports	=
-lance			= (newCfg = {}) ->
-	lance.initiated = true
-	lance.cfg		= merge lance.cfg, newCfg
-	lance.rootDir	= lance.cfg.rootDir or path.dirname require.main.filename
+L				= (newCfg) ->
+	L.initiated = true
 
-	lance.templating lance.cfg.tpl or lance.cfg.templating
+	# merges the two configs together, overwriting the defaults
 
-	try Keygrip = require('keygrip') or false
+	merge L.cfg, newCfg if newCfg
+	cfg = L.cfg
 
-	if Keygrip
-		lance.requestHandler.keygrip = Keygrip lance.cfg.keygripKeys
+	L.rootDir = cfg.rootDir or path.dirname require.main.filename
+
+	# Make sure we make cfg.server.cluster a bool
 	
-	if lance.cfg.ascii and cluster.isMaster
-		console.log """
-			\       __                     
-			\      / /___ _____  ________  
-			\     / / __ `/ __ \\/ ___/ _ \\ 
-			\    / / /_/ / / / / /__/  __/ 
-			\   /_/\\__/_/_/ /_/\\___/\\___/  
-			\                              
-		"""
+	cfg.server.workers = cfg.server.workerLimit if cfg.server.workerLimit
 
-	if lance.cfg.catchUncaught
+	if cfg.server.cluster is null
+		if cfg.server.workers < 2
+			cfg.server.cluster = false
+		else
+			cfg.server.cluster = true
+
+	# Backwards compat with old workerLimit property name
+
+	# Initiates the templating, which begins watching files, compiles them first etc.
+	L.tpl = new L.Tpl cfg.tpl or cfg.templating
+
+	try
+		Keygrip = require('keygrip')
+		L.requestHandler.keygrip = Keygrip cfg.keygripKeys
+
+	if cfg.catchUncaught
 		process.on 'uncaughtException', (err) ->
-			lance.error {
+			L.error {
 				type: 'uncaught'
 				error: err
 			}
 	
-	return lance
+	return L
 
-lance.cfg = require '../cfg/lance'
+L.cfg = require '../cfg'
 
-lance.error = () ->
-	error = lance.error.parse arguments
+
+L.error = ->
+	error = L.error.parse arguments
+
+	L.emit 'error', error
 
 	console.error error.text
-	lance.error.write error.text
+	L.error.write error.text
 
 	if error.severity is 'fatal'
-		process.kill()
+		process.exit(0)
 
 	return error
 
-lance.error.parse = (args) ->
-	if typeOf( args[0] ) is 'object'
+L.error.notice = ->
+	error = L.error.parse arguments
+
+	L.emit 'error', error
+
+	console.error error.text
+	L.error.write error.text
+
+	return error
+
+L.error.parse = (args) ->
+	if typeOf.Object args[0]
 		opt = args[0]
 	else
 		if args[0] instanceof Error
@@ -67,6 +88,10 @@ lance.error.parse = (args) ->
 
 	msg = error.message or ''
 
+	for fatalType in [EvalError, TypeError, SyntaxError, ReferenceError]
+		if error instanceof fatalType
+			error.severity = 'fatal'
+
 	if		type.match /^notice/i
 		error.severity = 'notice'
 
@@ -75,38 +100,43 @@ lance.error.parse = (args) ->
 
 	else
 		error.severity = 'fatal'
-
-	for fatalType in [EvalError, TypeError, SyntaxError, ReferenceError]
-		if error instanceof fatalType
-			error.severity = 'fatal'
-		
-	if scope
-		error.text = "[ #{error.severity} ] [ #{scope} ] #{msg}"
-	else
-		error.text = "[ #{error.severity} ] #{msg}"
+	
+	error.text = 'Error'.red + ', '.grey
 
 	if error.severity is 'fatal'
-		error.text += '\n' + error.stack
+		error.text += error.severity.red
+	else
+		error.text += error.severity.yellow
+
+	if scope
+		error.text += ' in '.grey + scope.grey
+
+	error.text += ': '.grey + msg
+
+	if error.severity is 'fatal'
+		error.text += '\n' + error.stack.grey
 
 	return error
 
-lance.error.write = (text, rootDir = lance.rootDir) ->
+L.error.write = (text, rootDir = L.rootDir) ->
 	if rootDir
 		logPath	= path.join rootDir, '/error.log'
 		errorBlock = "/err/#{new Date().toString()} #{text}\n"
 
 		fs.appendFile logPath, errorBlock
 
-lance.init		= lance
-lance.session	= { server: {} }
+L.init = L
 
-require './utils'
-{clone, merge, typeOf} = lance.utils
+# The core event emitter
+L.events	= new Emitter()
+L.on		= L.events.on.bind L.events
+L.emit		= L.events.emit.bind L.events
 
-require './router'
-require './templating'
+L.utils		= require './utils'
+L.Tpl		= require './templating'
+L.router	= require './router'
+
 require './server'
 
-
-module.exports = lance
+{clone, merge, typeOf} = L.utils
 

@@ -1,18 +1,20 @@
 
-lance = require './lance'
+L		= require './lance'
 
-{clone, merge, typeOf, toArray}	= lance.utils
+{clone, merge, typeOf, toArray}	= L.utils
 
 defaultResult = {
+	routes		: {}
 	path		: {}
 	splats		: []
 	name		: ''
 	callback	: false
 	pattern		: ''
+	regex		: null
 }
 
-router			=
-lance.router	= {
+module.exports	=
+router			= {
 	add: (method, pattern, name, callback) ->
 		keys	= []
 		regex	= pattern
@@ -20,7 +22,7 @@ lance.router	= {
 		if typeof regex is 'string'
 			regex = router.patternToRegex pattern, keys
 		
-		pattern = pattern.toString()
+		pattern = (pattern or '').toString()
 		
 		index = router.routes[method].length + 1
 
@@ -45,9 +47,9 @@ lance.router	= {
 		method = method.toLowerCase()
 
 		if method not of router.routes
-			lance.error {
+			L.error {
 				type	: 'warning'
-				scope	: 'lance.router.add'
+				scope	: 'L.router.add'
 				error	: new Error "#{method} method is unsupported/invalid"
 			}
 			return false
@@ -71,31 +73,34 @@ lance.router	= {
 		else
 			return results
 
-	match: (urlPath = '', method = 'get') ->
+	match: (urlPath = '', method = 'get', skipTo = 0) ->
 		if not urlPath or typeof urlPath isnt 'string'
-			lance.error {
+			L.error {
 				type	: 'warning'
-				scope	: 'lance.router.match'
+				scope	: 'L.router.match'
 				error	: new Error "#{urlPath} urlPath is invalid"
 			}
 			return defaultResult
 
-		method = method.toLowerCase()
+		routes	= router.routes
+		method	= method.toLowerCase()
 
-		if method not of router.routes
-			lance.error {
+		if method not of routes
+			L.error {
 				type	: 'warning'
-				scope	: 'lance.router.match'
+				scope	: 'L.router.match'
 				error	: new Error "'#{method}' method is unsupported/invalid"
 			}
 			return defaultResult
 
 		# if the path has been routed before and is thus indexed we can skip processing
-		if lance.cfg.router.cache and urlPath of router.indexes
-			return indexes[method][urlPath]
+		if false and L.cfg.router.cache and urlPath of router.indexes[method]
+			return router.indexes[method][urlPath]
 				
 		# process a result
-		for route in router.routes[method]
+		for route, index in routes[method]
+			continue if skipTo > index
+
 			path	= {}
 			splats	= []
 			
@@ -107,8 +112,10 @@ lance.router	= {
 			
 			for val, key in captures
 				varName = route.keys[key] or ''
-				
-				val = decodeURIComponent val.toString()
+
+				val = (val or '').toString()
+
+				try val = decodeURIComponent val
 				
 				if varName
 					path[varName] = val
@@ -116,6 +123,7 @@ lance.router	= {
 					splats.push val
 
 			result = {
+				index
 				routes		: router.namedRoutes
 				path		: path
 				splats		: splats
@@ -124,9 +132,9 @@ lance.router	= {
 				pattern		: route.pattern
 				regex		: route.regex
 			}
-			
+
 			# index the route
-			if lance.cfg.router.cache
+			if L.cfg.router.cache
 				router.indexes[method][urlPath] = result
 
 			return result
@@ -179,14 +187,22 @@ lance.router	= {
 	routes		: {}
 	namedRoutes	: {}
 	indexes		: {}
+	methods		: ['get', 'post', 'head', 'put', 'delete', 'trace', 'connect', 'options']
 }
 
-for _method in ['get', 'post', 'head', 'put', 'delete', 'trace', 'connect', 'options']
-	do (_method) ->
-		router[_method]					=
-		router[_method.toUpperCase()]	= (patterns, name, callback = ->) ->
-			router.route _method, patterns, name, callback
 
-	router.routes[_method] = []
-	router.indexes[_method] = {}
+for method in router.methods
+	do (method) ->
+		router[method]					=
+		router[method.toUpperCase()]	= (patterns, name, callback) ->
+			router.route method, patterns, name, callback
+
+	router.routes[method] = []
+	router.indexes[method] = {}
+
+router.all = (patterns, name, callback) ->
+	for method in router.methods
+		router.route method, patterns, name, callback
+
+	return null
 
