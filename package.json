@@ -1,19 +1,17 @@
 {
 	"name"			: "lance"
-,	"version"		: "0.19.0"
+,	"version"		: "0.21.1"
 ,	"author"		: "nfour [ github.com/nfour ]"
 ,	"description"	: "A sharp Node.js web framework"
 ,	"main"			: "./index"
 
 ,	"dependencies": {
-		"coffee-script"	: "1.6.x"
-	,	"ect"			: "0.4.x"
-	,	"keygrip"		: "0.2.x"
+		"coffee-script"	: ">= 1.6.3"
+	,	"keygrip"		: ">= 1.0.0"
 	,	"cookies"		: "0.3.x"
-	,	"stylus"		: "0.32.x"
-	,	"uglify-js"		: "2.2.x"
-	,	"colors"		: "0.6.2"
-	,	"eventemitter2"	: "0.4.13"
+	,	"uglify-js"		: "2.4.x"
+	,	"colors"		: "0.6.x"
+	,	"eventemitter2"	: "0.4.x"
 	}
 
 ,	"repository": {

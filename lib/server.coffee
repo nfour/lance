@@ -122,7 +122,7 @@ extend.render = (view = '', data = {}, done = ->) ->
 	res = this
 
 	if L.tpl.locals
-		data = merge clone( L.tpl.locals ), data
+		data = merge clone.merge( L.tpl.locals ), data
 
 	data.GET	= res.req.GET
 	data.POST	= res.req.POST
@@ -150,15 +150,12 @@ extend.serve = (opt = {}) ->
 	opt.data.POST	= res.req.POST
 	opt.data.req	= res.req
 
-	if L.tpl.locals
-		opt.data = merge clone( L.tpl.locals ), opt.data
-
-	render = opt.instance or L.tpl.render
+	tpl = opt.instance or L.tpl
 
 	L.emit 'serve', opt
 
 	if opt.view
-		render opt.view, opt.data, (err, rendered) =>
+		tpl.render opt.view, opt.data, (err, rendered) =>
 			if err
 				return res.serve.code 500
 
@@ -230,10 +227,9 @@ extend.compress = (body, done = ->) ->
 
 	handler = (err, body) ->
 		if err
-			return done L.error(
-				type: 'warning'
-				scope: 'L.compress'
-				error: err
+			return done L.notice(
+				'L.compress'
+				err
 			), body
 
 		done null, body

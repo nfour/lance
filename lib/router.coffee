@@ -1,5 +1,5 @@
 
-L		= require './lance'
+L = require './lance'
 
 {clone, merge, typeOf, toArray}	= L.utils
 
@@ -47,11 +47,10 @@ router			= {
 		method = method.toLowerCase()
 
 		if method not of router.routes
-			L.error {
-				type	: 'warning'
-				scope	: 'L.router.add'
-				error	: new Error "#{method} method is unsupported/invalid"
-			}
+			L.error(
+				'L.router.route'
+				new Error "#{method} method is unsupported/invalid"
+			)
 			return false
 
 		args = toArray arguments
@@ -75,22 +74,20 @@ router			= {
 
 	match: (urlPath = '', method = 'get', skipTo = 0) ->
 		if not urlPath or typeof urlPath isnt 'string'
-			L.error {
-				type	: 'warning'
-				scope	: 'L.router.match'
-				error	: new Error "#{urlPath} urlPath is invalid"
-			}
+			L.error(
+				'L.router.match'
+				new Error "#{urlPath} urlPath is invalid"
+			)
 			return defaultResult
 
 		routes	= router.routes
 		method	= method.toLowerCase()
 
 		if method not of routes
-			L.error {
-				type	: 'warning'
-				scope	: 'L.router.match'
-				error	: new Error "'#{method}' method is unsupported/invalid"
-			}
+			L.error(
+				'L.router.match'
+				new Error "'#{method}' method is unsupported/invalid"
+			)
 			return defaultResult
 
 		# if the path has been routed before and is thus indexed we can skip processing
