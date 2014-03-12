@@ -1,15 +1,15 @@
 
-module.exports = {
+module.exports =
 	ascii			: false # displays ascii art for lance at startup
 	catchUncaught	: true # catches any uncaught errors into lance.error()
 	compress		: false
-	keygripKeys: ['Wwavifkuiv7C5JFNCDTiyD6U1RGxz48f'] # used for encoding cookies
+	keygripKeys		: ['Wwavifkuiv7C5JFNCDTiyD6U1RGxz48f'] # used for encoding cookies
 	
-	router	: {
+	router:
 		cache: true
-	}
+	
 
-	server: {
+	server:
 		cluster		: null # null, true, false
 		workers		: 99 # if 1 or less, will not use the cluster unless cluster is set to true
 		port		: 80
@@ -19,33 +19,32 @@ module.exports = {
 		method		: 'port'
 		requestCb	: false
 		maxSockets	: 20
-	}
 
 	rootDir: ''
 	
-	tpl: {
+	tpl:
+		merge: null
+
 		rootDir	: ''
 
 		locals: {}
-		watchChangeWait: 1500 # Waits this long after each change event before saving
-		watchInterval: 2000 # After each change event, wait this long before acknowledging any more for this file
-		ect: {
+		watchTimeout: 1500 # The max time between each change event before saving
+
+		ect:
 			engine	: undefined
 			ext		: '.ect'
 			findIn	: ''
 			minify	: true
 
-			options: { # options object that is passed when initiating an ECT engine
+			options: # options object that is passed when initiating an ECT engine
 				root	: ''
 				cache	: true
 				ext		: ''
 				watch	: true
 				open	: '<?'
 				close	: '?>'
-			}
-		}
-
-		stylus: {
+			
+		stylus:
 			ext			: '.styl'
 			engine		: undefined
 			renderTo	: 'static'
@@ -54,9 +53,8 @@ module.exports = {
 			minify		: true
 			watch		: true
 			inherit		: true
-		}
 		
-		coffee: {
+		coffee:
 			ext			: '.coffee'
 			engine		: undefined
 			renderTo	: 'static'
@@ -65,25 +63,20 @@ module.exports = {
 			minify		: true
 			watch		: true
 			inherit		: true
-		}
 
-		css: {
+		css:
 			minify			: true
 			ext				: '.css'
 			renderTo		: ''
 			findIn			: ''
 			watch			: true
 			inherit			: true 
-		}
 
-		js: {
+		js:
 			minify			: true
 			ext				: '.js'
 			renderTo		: ''
 			findIn			: ''
 			watch			: true
 			inherit			: true
-		}
-	}
 
-}

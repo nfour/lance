@@ -121,11 +121,12 @@ extend = {}
 extend.render = (view = '', data = {}, done = ->) ->
 	res = this
 
-	if L.tpl.locals
-		data = merge clone.merge( L.tpl.locals ), data
+	data.GET	=
+	data.POST	=
+	data.PUT	=
+	data.DELETE	=
+	data.query	= res.req.query
 
-	data.GET	= res.req.GET
-	data.POST	= res.req.POST
 	data.req	= res.req
 
 	L.tpl.render view, data, done
@@ -146,10 +147,6 @@ extend.serve = (opt = {}) ->
 	opt.data		or opt.data			= {}
 	opt.view		or opt.view			= ''
 
-	opt.data.GET	= res.req.GET
-	opt.data.POST	= res.req.POST
-	opt.data.req	= res.req
-
 	tpl = opt.instance or L.tpl
 
 	L.emit 'serve', opt
@@ -167,7 +164,6 @@ extend.serve = (opt = {}) ->
 
 extend.serve.json = (obj) ->
 	res = this
-	# TODO: make these use .respond()
 
 	L.emit 'serve.json', arguments
 
@@ -277,21 +273,29 @@ L.extendRequest = (req, done = ->) ->
 
 	req.next = extend.next.bind req
 
-	req.GET		= url.query
-	req.POST	= {}
-
-	if req.method is 'POST'
+	if req.method.toLowerCase() isnt 'get'
 		postBody = ''
 
 		req.on 'data', (chunk) ->
 			postBody += chunk
 
 		req.on 'end', ->
-			req.POST = querystring.parse postBody
+			req.GET		=
+			req.POST	=
+			req.PUT		=
+			req.DELETE	=
+			req.query	= querystring.parse postBody
 
 			done()
 	else
+		req.GET		=
+		req.POST	=
+		req.PUT		=
+		req.DELETE	=
+		req.query	= url.query
+		
 		done()
+
 
 L.extendResponse = (res) ->
 	res.render			= extend.render.bind res

@@ -5,7 +5,7 @@ cluster		= require 'cluster'
 L			= require './lance'
 uglifyJs	= require 'uglify-js'
 
-{clone, merge, typeOf, isAbsolute, changeExt, isExt, exploreDir, empty, minify, minifyCss, bind} = L.utils
+{clone, merge, typeOf, isAbsolute, changeExt, isExt, changeExt, exploreDir, empty, minify, minifyCss, bind} = L.utils
 
 defaultTpl = require('../cfg').tpl
 
@@ -34,6 +34,7 @@ module.exports = (newCfg) ->
 					js: {}
 					css: {}
 				}
+				watchTimeouts: {}
 			}
 
 			self.cfg.rootDir = self.cfg.rootDir or L.rootDir
@@ -59,7 +60,7 @@ module.exports = (newCfg) ->
 					else
 						ect.options.root = ect.options.root or self.cfg.rootDir
 
-					ect.options.ext	= ect.options.ext or ect.ext
+					ect.options.ext		= ect.options.ext or ect.ext
 					ect.engine			= ect.engine ect.options
 
 				ect.ext = ect.ext or ect.options.ext or ''
@@ -72,14 +73,14 @@ module.exports = (newCfg) ->
 
 			if js.inherit
 				js.findIn		= js.findIn or coffee.findIn
-				js.renderTo	= js.renderTo or coffee.renderTo
+				js.renderTo		= js.renderTo or coffee.renderTo
 
 			if stylus.inherit
 				stylus.findIn		= stylus.findIn or css.findIn
 				stylus.renderTo	= stylus.renderTo or css.renderTo
 
 			if coffee.inherit
-				coffee.findIn		= coffee.findIn or js.findIn
+				coffee.findIn	= coffee.findIn or js.findIn
 				coffee.renderTo	= coffee.renderTo or js.renderTo
 
 			#if cluster.isMaster # removed because naught wouldnt recompile shit
@@ -110,7 +111,7 @@ module.exports = (newCfg) ->
 		# TODO: change this so that it works with consolodate.js instead of just going to ECT
 		@::render = (dir, locals, done) ->
 			if locals
-				locals = merge clone.merge( self.locals ), locals
+				locals = merge.black locals, clone.merge( self.locals ), 6
 
 			self.render.ect dir, locals, done
 
@@ -314,7 +315,10 @@ module.exports = (newCfg) ->
 				try
 					rendered = coffee.engine.compile file
 				catch err
-					return done()
+					return done L.notice(
+						'L.tpl.render.coffee compile'
+						err
+					), ''
 
 				renderTo	= self.resolveDir coffee.renderTo
 				ext			= path.extname fileDir
@@ -326,54 +330,24 @@ module.exports = (newCfg) ->
 						if result = uglifyJs.minify rendered, { fromString: true, mangle: false }
 							rendered = result.code
 					catch err
-						return done()
+						return done L.notice(
+							'L.tpl.render.coffee uglifyJs'
+							err
+						), ''
 
 				if not self.render.js.merge.add fileDir, rendered
 					fs.writeFile newFileDir, rendered, (err) =>
 						if err
-							return done L.notice(
+							err = L.notice(
 								'L.tpl.render.coffee coffee.engine.render fs.writeFile'
 								err
-							), rendered
+							)
 
-						done null, rendered
+						done err, rendered
 				else
 					self.render.js.merge done
 
 		# self.render.merge
-
-		# not called on its own. instead, self.render.[coffee|stylus].merge
-		# supplies it with mergeCache and a file extension
-		@::render.merge = (mergeCache, modal, done = ->) ->
-			{ext, renderTo} = modal
-
-			if empty mergeCache
-				return done null, ''
-
-			for groupName, group of mergeCache
-				merged	= ''
-				keys	= Object.keys( group ).sort()
-
-				continue if not keys.length
-
-				for fileDir in keys
-					rendered = group[fileDir]
-
-					merged += "/* #{path.basename fileDir} */\n#{rendered}\n\n"
-
-				renderTo	= self.resolveDir renderTo
-
-				newFileDir	= path.join renderTo, "#{groupName + ext}"
-
-
-				fs.writeFile newFileDir, merged, (err) ->
-					if err
-						return done L.notice {
-							'L.tpl.render.merge fs.writeFile'
-							err
-						}, merged
-
-					done null, merged
 
 		@::render.css.merge = (done = ->) ->
 			self.render.merge self.cache.merge.css, css, done
@@ -387,7 +361,68 @@ module.exports = (newCfg) ->
 		@::render.css.merge.add = (fileDir, str) ->
 			self.render.merge.add 'css', fileDir, str
 
+		# not called on its own. instead, self.render.[coffee|stylus].merge
+		# supplies it with mergeCache and a file extension
+		@::render.merge = (mergeCache, modal, done = ->) ->
+			{ext, renderTo, findIn} = modal
+			findIn = [findIn] if not typeOf.Array findIn
+
+			if empty mergeCache
+				return done null, ''
+
+			merged = ''
+
+			if self.cfg.merge then for group in self.cfg.merge
+				continue if group.name not of mergeCache
+
+				for relPath in group.files
+					for fileDir, rendered of mergeCache[group.name]
+						parentDir = path.dirname fileDir
+
+						for findInPath in findIn
+							constructedDir = path.join findInPath or '', relPath
+
+							if constructedDir is fileDir
+								merged += "/* #{path.basename fileDir} */\n#{rendered}\n\n"
+
+				renderTo	= self.resolveDir renderTo
+
+				newFileDir	= path.join renderTo, changeExt group.name, ext
+
+				fs.writeFile newFileDir, merged, (err) ->
+					if err
+						return done L.notice {
+							'L.tpl.render.merge fs.writeFile'
+							err
+						}, merged
+
+					done null, merged
+
 		@::render.merge.add = (type, fileDir, str) ->
+			return false if not fileDir or not str?
+			findIn = self.cfg[type]?.findIn
+			findIn = [findIn] if not typeOf.Array findIn
+
+			parentDir = path.dirname fileDir
+
+			if self.cfg.merge then for group in self.cfg.merge
+				for relPath in group.files
+					for findInPath in findIn
+						constructedDir = path.join findInPath or '', relPath
+
+						if constructedDir is fileDir
+							cache = self.cache.merge[type]
+
+							if group.name not of cache
+								cache[group.name] = {}
+
+							cache[group.name][fileDir] = str
+
+							return true
+
+			return false
+
+		@::render.merge.addOld = (type, fileDir, str) ->
 			return false if not fileDir or not str?
 
 			# will group filenames like:
@@ -504,8 +539,6 @@ module.exports = (newCfg) ->
 				self.render.coffee fileDir
 				self.watch fileDir
 
-		# NOTE: put these into a single function after they're proven to work to test
-		# if the closure will retain pointers to the correct objects, thus remaining DRY
 		@::watch = (fileDir) ->
 			return false if not fileDir
 
@@ -526,20 +559,15 @@ module.exports = (newCfg) ->
 			fs.watch fileDir, (event) =>
 				return false if event isnt 'change'
 
-				now		= new Date().getTime()
-				diff	= now - self.cfg.watchInterval
+				watchTimeouts = self.cache.watchTimeouts
 
-				if fileDir of renderedAt and renderedAt[fileDir] > diff
-					return false
+				if fileDir of watchTimeouts
+					clearTimeout watchTimeouts[fileDir]
+					delete watchTimeouts[fileDir]
 
-				renderedAt[fileDir] = new Date().getTime()
-
-				# has to be a timeout because fs.watch goes off twice, and the file
-				# can be saved in multiple parts, calling event "change" too often
-
-				setTimeout ( ->
+				watchTimeouts[fileDir] = setTimeout ( ->
 					render fileDir
-				), self.cfg.watchChangeWait
+				), self.cfg.watchTimeout
 
 			watching[fileDir] = true
 
@@ -549,4 +577,4 @@ module.exports = (newCfg) ->
 			if isAbsolute dir
 				return dir
 			else
-				return path.join root or self.cfg.root or '', dir
+				return path.join root or self.cfg.rootDir or '', dir

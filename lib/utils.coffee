@@ -7,32 +7,27 @@ utils			= {}
 
 # Returns variable type as string
 utils.typeOf = (vari) ->
-	t = typeof vari
+	return switch Object::toString.call vari
+		when '[object Undefined]'	then 'undefined'
+		when '[object String]'		then 'string'
+		when '[object Function]'	then 'function'
+		when '[object Boolean]'		then 'boolean'
+		when '[object Object]'		then 'object'
+		when '[object Array]'		then 'array'
+		when '[object Null]'		then 'null'
+		when '[object Number]'		then ( if vari then 'number' else 'nan' )
+		when '[object Date]'		then 'date'
+		when '[object RegExp]'		then 'regexp'
+		else 'null'
 
-	if t is 'undefined' or t is 'string' or t is 'function' or t is 'boolean'
-		return t 
-
-	return 'array' if Array.isArray vari
-
-	for type of typeTable
-		if "[object #{type}]" is Object::toString.call vari
-			return type.toLowerCase()
-
-	return 'null'
-
-utils.sort = (aryObj) ->
-	fields = Array::slice.apply(arguments)[1..]
+utils.sort = (array, fields...) ->
+	array = array.slice()
 	
 	for field in fields
-		if not utils.typeOf.Object field
-			field = {
-				key: field.toString()
-			}
-		
 		field.order = !! ( field.order is 'asc' )
 		field.key or field.key = ''
 			
-		do (field) -> aryObj.sort (a, b) ->
+		do (field) -> array.sort (a, b) ->
 			lesserReturn = if field.order then -1 else 1
 			greaterReturn = if field.order then 1 else -1
 			
@@ -43,8 +38,8 @@ utils.sort = (aryObj) ->
 			return greaterReturn if val1 > val2
 
 			return 0
-			
-	return aryObj
+
+	return array
 
 # Checks for object or array type
 utils.isIterable = (vari) ->
@@ -189,17 +184,17 @@ utils.minifyCss = (str = '') ->
 		.replace(/\s+\}/g, '}')
 
 
-utils.clone = (obj) ->
+utils.clone = (obj, depth = 8) ->
 	try
 		return utils.clone.json obj
 	catch err
-		return utils.clone.merge obj
+		return utils.clone.merge obj, depth
 
 utils.clone.json = (obj) ->
 	return JSON.parse JSON.stringify obj
 
-utils.clone.merge = (obj) ->
-	return utils.merge {}, obj
+utils.clone.merge = (obj, depth = 8) ->
+	return utils.merge {}, obj, depth
 
 utils.clone.array = (obj) ->
 	return obj.slice(0)
@@ -226,6 +221,7 @@ utils.merge = (obj1, obj2, depth = 8) ->
 				obj1[key] = obj2[key]
 
 	return obj1
+
 
 utils.inspect = (vari, depth = 6, showHidden = true, colors = true) ->
 	require('util').inspect vari, { depth, showHidden, colors }
@@ -265,15 +261,6 @@ fullTypeTable = {
 	'String'	: String
 	'Function'	: Function
 	'Array'		: Array
-	'Object'	: Object
-	'Null'		: null
-	'Number'	: Number
-	'Date'		: Date
-	'RegExp'	: RegExp
-	'NaN'		: NaN
-}
-
-typeTable = {
 	'Object'	: Object
 	'Null'		: null
 	'Number'	: Number

@@ -1,12 +1,12 @@
 {
 	"name"			: "lance"
-,	"version"		: "0.21.1"
+,	"version"		: "0.24.0"
 ,	"author"		: "nfour [ github.com/nfour ]"
 ,	"description"	: "A sharp Node.js web framework"
 ,	"main"			: "./index"
 
 ,	"dependencies": {
-		"coffee-script"	: ">= 1.6.3"
+		"coffee-script"	: "git://github.com/xixixao/coffee-script.git"
 	,	"keygrip"		: ">= 1.0.0"
 	,	"cookies"		: "0.3.x"
 	,	"uglify-js"		: "2.4.x"

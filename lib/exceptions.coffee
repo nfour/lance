@@ -38,7 +38,7 @@ L.error.parse = (args) ->
 		else
 			opt = { type: args[0], error: args[1] }
 
-	type	= opt.type or 'warning'
+	type	= opt.type or ''
 	scope	= opt.scope or ''
 	error	= opt.error or 'Error'
 
@@ -58,7 +58,7 @@ L.error.parse = (args) ->
 			error.severity = 'warning'
 		else
 			error.severity = 'fatal'
-	
+
 	error.text = 'Error'.red + ', '.grey
 
 	if error.severity is 'fatal'
