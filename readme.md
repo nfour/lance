@@ -222,3 +222,12 @@ The result is that the static directory will always have only what you want to m
 Cloned via the github repo, tests are manual in nature at the moment. Due to the complexity of a web server, they consist of scenarios for which must be manually tested and interacted with in the browser, currently.
 
 All dependencies have unit tests.
+
+```
+       __                     
+      / /___ _____  ________  
+     / / __ `/ __ \/ ___/ _ \ 
+    / / /_/ / / / / /__/  __/ 
+   /_/\__/_/_/ /_/\___/\___/  
+   
+```
