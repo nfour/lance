@@ -1,15 +1,15 @@
 # Lance
-The alpha-strike web server with sane defaults.
-A framework that aims to handle everything for you, automatically.
+The alpha-strike web framework.    
+A framework with sane defaults, aiming to handle everything for you as automatically as possible.
 
-**API Stability**: `Unstable`
+**API Stability**: `Semi-Unstable`
 
 ## Minimal API
 - `new Lance( config )`
 - `lance.initailize()`
 
 **What just happened:**
-- A Http server was started
+- An HTTP server was started
 - Compiled, minified, bundled and watched Stylus, CoffeeScript, CJSX, CSS, JS
 	+ Saved to the static directory
 - Populated the static asset directory at `./static`
@@ -21,7 +21,7 @@ A framework that aims to handle everything for you, automatically.
 
 All parts of Lance can be utilized outside of the config. Lance always utilizes promises for async operations.
 
-See **[./config.coffee](#)**, effectively an API reference.
+See the **[./config](src/config.coffee)** - effectively an API reference.
 
 ### The minimal example:
 ```coffee
@@ -171,8 +171,8 @@ new Lance {
 
 For these features to become avaliable, simply make sure they're installed.
 - `browserify` for bundling coffee/js
-	+ `coffee-react` for embedding JSX into Coffee
-	+ `coffeeify` instead of cjsxify, without JSX
+	+ `coffee-reactify` for embedding JSX into Coffee
+	+ `coffeeify` only normal coffeescript
 - `stylus` 
 - `coffee-script`
 - `uglify-js` for js compression
