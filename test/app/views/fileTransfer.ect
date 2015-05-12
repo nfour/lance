@@ -1,0 +1,12 @@
+<html>
+	<head>
+		<link rel="stylesheet" href="/static/style.css">
+	</head>
+	<body>
+		<<= @file?.toString('hex') >>
+		<form action="/fileTransfer" method="POST" enctype="multipart/form-data">
+			<input type="text" name="a">
+			<input name="fileHere" type="file"><button type="submit">Submit</button>
+		</form>
+	</body>
+</html>

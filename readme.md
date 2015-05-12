@@ -1,145 +1,224 @@
-```
-       __                     
-      / /___ _____  ________  
-     / / __ `/ __ \/ ___/ _ \ 
-    / / /_/ / / / / /__/  __/ 
-   /_/\__/_/_/ /_/\___/\___/            
-   
-```
-Lance, another flavor on a minimal node web framework.
+# Lance
+The alpha-strike web server with sane defaults.
+A framework that aims to handle everything for you, automatically.
+
+**API Stability**: `Unstable`
+
+## Minimal API
+- `new Lance( config )`
+- `lance.initailize()`
+
+**What just happened:**
+- A Http server was started
+- Compiled, minified, bundled and watched Stylus, CoffeeScript, CJSX, CSS, JS
+	+ Saved to the static directory
+- Populated the static asset directory at `./static`
+	+ Assets like `img.png`, `robots.txt` are copied over with their preserved directory structure.
+- Set up request routing
+- Began serving static assets from `./static`
+- Began utlizing a templating engine in `./views`
+- Began parsing http requests; forms, file transfers
+
+All parts of Lance can be utilized outside of the config. Lance always utilizes promises for async operations.
+
+See **[./config.coffee](#)**, effectively an API reference.
+
+### The minimal example:
 ```coffee
-cfg   = require('./cfg')
-lance = require('lance')
+Lance = require 'lance'
 
-lance(cfg) # Initiates Lance with the config object
-
-# Starts the server and listens on previously configured port/socket
-# Depending on config, will start either cluster or normal server
-lance.start()
-
-lance.router.GET('/:page(about|contact)', 'paging', (req, res) ->
-    res.serve "pages/#{req.route.path.page}"
-)
-
-lance.router.GET('*', (req, res) ->
-    res.serve.code 400
-)
-
-lance.on('listening',->
-    console.log 'listening!'
-)
-```
-Lance handles:
-- Routing
-- Request parsing
-- Cookies
-- Templating (CSS, JS, Stylus, CoffeeScript, ECT)
-- Automation of finding, rendering, watching, merging and minifying templating assets
-
-Basically, web server basics.
-Additionally; error handling, compression, utility functions, while being fast.
-
-### API
-Lance is governed by a single config object that you feed it on initialization.
-The idea is to supply said config then to barely have to touch Lance again beyond defining routing and starting the server.
-
-```coffee
-cfg = require('./cfg/lance') # Exports the config object
-lance(cfg) # Initiated
-```
-
-See `/cfg.coffee` for the default config.
-
-Lance makes a request's response functionality avaliable via the extension of the `req` and `res` http variables supplied to new requests. `res` and `req` does not need to be passed to any of these functions.
-
-```coffee
-# Imagine a url path: '/about?foo=bar'
-# Matching route pattern: '/:page(about|contact)' (as defined in the example above)
-
-### request extensions ###
-
-req.res     = res
-req.cookies = [Cookies Object]
-req.route   = {
-    path     : { page: 'about' }
-    splats   : []
-    name     : 'paging'
-    callback : ->
-    pattern  : '/:page(about|contact)'
+lance = new Lance {
+	routes: [
+		[ "GET", '/:api(a|b|c|d)', (o) ->
+				console.log 'ayyy' if o.route.api is 'a'
+				o.serve { body: 'woo!' }
+		]
+	]
 }
 
-# The fallback callback for all routes
-req.callback = ->
-
-req.GET  = { foo: 'bar' }
-req.POST = {}
-
-### response extensions ###
-
-res.req     = req
-res.cookies = [Cookies Object]
-
-# A function for serving a template or body
-# Default values for the optionsObject are:
-optionsObject = {
-    code     : 200
-    headers  : { 'content-type': 'text/html; charset=utf-8' }
-    encoding : 'utf8'
-    body     : ''
-    view     : ''
-    template : '' # An alias to 'view'. Either is valid
-    data     : {} # contains data that will passed to templates/views
-}
-res.serve = (optionsObject_or_viewPathString) ->
-
-# Serves an object or string as json with the correct headers
-res.serve.json = (jsonObject_or_jsonString) ->
-
-# Redirects to the specified path
-res.serve.redirect = (pathString) ->
-
-# Serves a plaintext page with the code and its corresponding description (as body) as defined in httpcodes.coffee
-res.serve.code = (httpCode, [headers], [body]) ->
-
-# A function to compress a body according to request headers, returning it in a callback
-# This is also called automatically if lance.cfg.compress is true. Default is false
-res.compress = (body, callback) ->
-
-# A shortcut to serve the response, bypassing templating (it's called by res.serve eventually)
-# Default values for the optionsObject are:
-optionsObject = {
-    code     : 200
-    headers  : { 'content-type': 'text/html; charset=utf-8' }
-    encoding : 'utf8'
-    body     : ''
-}
-res.respond = (optionsObject) ->
-
+lance.initialize().then -> # Server is up!
 ```
 
-Write `console.log lance` to show all exposed properties, as prototyping isnt used.
+### The full example:
+```coffee
 
-Other than that, just look through the code yourself. While it's not commented, considering the verbosity of CoffeeScript and the variable name choices, I'd say it's mostly self explanitory.
+###
+The directory structure:
+/project/
+	/static/
+	/views/
+		index.jade
+		style.styl
+		app.coffee
+		/images/
+			image.png
+	
+	server.coffee (this)
+###
 
-For templating, ECT is supported. Consolodate.js may be a good idea to support should anyone but myself decide to use this code.
+Lance = require 'lance'
 
-### Events
+lance = new Lance {
+	server:
+		host: '0.0.0.0'
+		port: 1337
+		static: './static' # Automatically intercepts and serves static content
+	
+	templater:
+		findIn: './views'
+		saveTo: './static'
+		
+		###
+		Bundle up all Stylus/Css or Coffee/Js dependencies into a single file
+		by utilizing Stylus and browserify.
+		###
+		bundle:
+			# destination	: source
+			"my/css/here.css": "style.styl"
+			"app.js": "app.coffee"
+			
+		templater:
+			ext: '.jade'
+			engine: require 'jade'
+}
 
-All events contain appropriate modifiable objects for arguments. You can change properties to modify events.
+# Routes can be defined after instantiation, outside of the config, too
 
+lance.router.get '/:api(a|b|c|d)', (o) ->
+	###
+	`o` is a special options object containing request information in a pre-parsed manner. `o` is passed to all route requests in place of `req` and `res`.
+	
+	More info on this later.
+	###
+	
+	if o.route.api is 'a'
+		console.log 'ayyy'
+	
+	# This will resolve to our ./project/views/index.jade file
+	o.template.view = 'index'
+	
+	###
+	o.serve() serves a response based on either arguements passed to it or depending on properties in `o`.
+	
+	if `o.template.view` is set, the template will be rendered
+	if `o.redirect` is set, a redirection will occur
+	if neither are set, Lance serves JSON by default.
+	
+	You may also instead call `o.serveTemplate()`, `o.serveHttpCode()`, `o.serveJson()`, `o.serveRedirect()` or a basic `o.respond()`
+	###
+	o.serve()
+	
+###
+This will build the templates then start the server, all depending on the config. 
+###
+lance.initialize().then ->
+	# we're ready
 
-- `respond` with `(options Object) ->`
-- `serve` Right after res.serve is called. `(options Object) ->`
-- `serve.json`, `serve.redirect`, `serve.code` Same as above, but with `(arguments Object) ->`
-- `request` with `(res Object, req Object) ->`
-- `listening` On server listening event
+###
+Alternitavely...
+
+There is a choice between `lance.initialize()`, which initializes everything in order, and manually initializing aspects of lance for more control.
+###
+
+lance.templater.initialize().then ->
+	# The bundles have been compiled to:
+	#	./projectDirectory/static/style.css
+	#	./projectDirectory/static/app.js
+	# from the ./projectDirectory/views directory.
+	# and will be watched for changes (and any of their dependencies)
+	# then recompiled automatically
+
+	lance.start().then ->
+		# we're ready
+		
+###
+The new directory structure:
+/project/
+	/static/
+		/my/
+			/css/
+				here.css
+		app.js
+		/images/
+			image.png
+	/views/
+		index.jade
+		style.styl
+		app.coffee
+		/images/
+			image.png
+	
+	server.coffee (this)
+###
+```
+
+### Templating explained
+
+You can specify your own templater middleware. If none are specified, then Lance will default to checking whether `ect` is installed and will use that. 
 
 ```coffee
 
-lance.on('serve', (options) ->
-    if options.data.goHome
-        options.view = 'home'
-)
+new Lance {
+	templater:
+		templater:
+			ext: '.jade'
+			engine: require 'jade'
+			options: {} # Supplied to the engine on instantiation
+}
 ```
 
-In the above, the serve event still hasnt actually rendered anything thus the view can be changed.
+### Optional modules
+
+For these features to become avaliable, simply make sure they're installed.
+- `browserify` for bundling coffee/js
+	+ `coffee-react` for embedding JSX into Coffee
+	+ `coffeeify` instead of cjsxify, without JSX
+- `stylus` 
+- `coffee-script`
+- `uglify-js` for js compression
+- `lactate` for static file serving
+
+#### Stylus
+Stylus is compulsary if you're going to bundle css assets; because Stylus can exist as pure css with the benefit of the `@require()` and `@import` bundling syntax. Any plain CSS file is concatenated, it is not resolved to an `@import`.
+
+### Static assets
+Lance handles these mostly automatically:
+- CSS and Stylus
+- CoffeeScript, CJSX and Javascript
+- Static assets such as images, json, robots.txt etc.
+
+On initialization:
+- Bundles are rendered to the static directory
+- Bundles are watched for changes, then rerendered
+- Assets files are copied over to the static directory
+- Assets files are watched for changes, then resaved
+- Directories are watched for new directories and files
+
+By default all static assets that match the regexp (found in the config's `templater.assets.match`) will be copied over to the static directory.
+- For some filetypes, such as images, this means they can also be optimized. 
+	+ TODO: Impliment asset stream hooking
+
+```coffee
+new Lance {
+	templater:
+		findIn: './views'
+		saveTo: './static'
+		
+		###
+		true by default, this causes `assets` to keep their directory structure inside the saveTo folder.
+		###
+		preserveDirectory: true
+		
+		bundle:
+			# destination	: source
+			"style.css"		: "style.styl"
+			"app.js"		: "app.coffee"
+}
+```
+
+The result is that the static directory will always have only what you want to make public, in one place, with a directory structure that will mirror your views.
+
+## Tests
+Cloned via the github repo, tests are manual in nature at the moment. Due to the complexity of a web server, they consist of scenarios for which must be manually tested and interacted with in the browser, currently.
+
+All dependencies have unit tests.

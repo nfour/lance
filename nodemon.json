@@ -1,0 +1,16 @@
+{
+	"verbose": false
+,	"ignore": [
+		"*.css"
+	,	"*.styl"
+	,	"*.log"
+	,	"test/**/static/*"
+	,	"test/**/views/*"
+	]
+,	"watch": [
+		"src/*"
+	,	"test/*"
+	]
+,	"ext" : "js coffee json"
+,	"exec": "cake build && coffee"
+}

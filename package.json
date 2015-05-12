@@ -1,21 +1,42 @@
 {
-	"name"			: "lance"
-,	"version"		: "0.24.0"
-,	"author"		: "nfour [ github.com/nfour ]"
-,	"description"	: "A sharp Node.js web framework"
-,	"main"			: "./index"
+	"name"				: "lance"
+,	"description"		: "The alpha-strike framework"
+,	"version"			: "2.1.4"
+,	"author"			: { "name": "nfour" }
+,	"repository"		: {
+		"type": "git",
+		"url": "https://github.com/nfour/lance"
+	}
 
 ,	"dependencies": {
-		"coffee-script"	: "git://github.com/xixixao/coffee-script.git"
-	,	"keygrip"		: ">= 1.0.0"
-	,	"cookies"		: "0.3.x"
-	,	"uglify-js"		: "2.4.x"
-	,	"colors"		: "0.6.x"
-	,	"eventemitter2"	: "0.4.x"
+		"bluebird"		: "^2.9.14"
+	,	"mkdirp"		: "0.5.x"
+	
+	,	"cookies"		: "0.5.x"
+	,	"colors"		: "1.0.x"
+	,	"watch"			: "0.16.x"
+	
+	,	"busboy"		: "0.2.x"
+	
+	,	"transposer"	: "0.3.x"
+	,	"coroutiner"	: "0.1.x"
+	,	"lutils"		: "0.2.x"
+
+	}
+	
+,	"devDependencies": {
+		"coffee-script"		: "^1.9.2"
+	,	"coffee-reactify"	: "3.0.x"
+	,	"browserify"		: "^9.0.8"
+	,	"stylus"			: "0.51.0"
+	,	"uglify-js"			: "2.4.x"
+	,	"lactate"			: "0.13.x"
+	}
+	
+,	"scripts": {
+		"build"		: "cake build"
+	,	"publicate"	: "npm run build && npm publish"
 	}
 
-,	"repository": {
-		"type"	: "git"
-	,	"url"	: "https://github.com/nfour/lance"
-	}
+,	"main": "./lib/Lance"
 }
