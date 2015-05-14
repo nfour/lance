@@ -80,6 +80,9 @@ module.exports = class EventHandler
 					emitter.on 'templater.writeFile', (to) ->
 						console.log 'templater.writeFile'.grey, 'to'.grey, to
 
+	###
+		Relays all events from @emitter to the specified emitter.
+	###
 	relay: (emitter) ->
 		emit = @emitter.emit.bind @emitter
 		
@@ -87,12 +90,10 @@ module.exports = class EventHandler
 			emitter.emit args...
 			emit args...
 	
+	# [DEPRECATED]
 	extend: (emittee) ->
-		emittee.emitter	= @emitter.emitter
-		
-		merge emittee, emittee.emitter.__proto__
-		
-		emittee.on		= emittee.on.bind emittee.emitter
-		emittee.emit	= emittee.emit.bind emittee.emitter
+		emittee._events = @emitter._events
+		emittee.on		= @emitter.on.bind @emitter
+		emittee.emit	= @emitter.emit.bind @emitter
 
-		return @emitter
+		return emittee

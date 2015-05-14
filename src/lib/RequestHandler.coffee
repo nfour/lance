@@ -130,8 +130,7 @@ module.exports = coroutiner class RequestHandler
 		@res.statusCode = @code
 		@res.setHeader key, val for key, val of @headers
 
-		#length = Buffer.byteLength @body.toString(), 'utf8'
-		#@res.setHeader 'content-length', length or 0
+
 		
 		stream = new require('stream').Readable()
 		switch type = typeOf @body
@@ -142,15 +141,19 @@ module.exports = coroutiner class RequestHandler
 				stream.pipe @body
 		
 		if @lance.cfg.server.compress
-			if compresser = @compress()
-				stream = stream.pipe compresser
+			if compressor = @compress()
+				stream = stream.pipe compressor
+			
+		if not compressor?
+			length = Buffer.byteLength @body.toString(), 'utf8'
+			@res.setHeader 'content-length', length or 0
 		
 		stream.pipe @res
 		
 		#@res.end()
 		#@res.end @body, @encoding
 
-	compress: (body) ->
+	compress: ->
 		acceptEncoding = @req.headers['accept-encoding'] or ''
 		
 		if acceptEncoding.match /\bgzip\b/i
@@ -160,7 +163,6 @@ module.exports = coroutiner class RequestHandler
 			@res.setHeader 'content-encoding', 'deflate'
 			return zlib.createDeflate @lance.cfg.compress.createDeflate
 		else
-			@res.setHeader 'content-length', body.length or 0
 			return null
 				
 	compressSync: (body) ->
