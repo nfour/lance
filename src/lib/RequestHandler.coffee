@@ -18,7 +18,6 @@ module.exports = coroutiner class RequestHandler
 		@code			= 200
 		@headers		= { 'content-type': 'text/html; charset=utf-8' }
 		@body			= ''
-		@encoding		= 'utf8'
 		@json			= {}
 		@template		= { view: '', data: {}, templater: @lance.templater }
 		@redirect		= ''
@@ -130,8 +129,6 @@ module.exports = coroutiner class RequestHandler
 		@res.statusCode = @code
 		@res.setHeader key, val for key, val of @headers
 
-
-		
 		stream = new require('stream').Readable()
 		switch type = typeOf @body
 			when 'string'
@@ -149,9 +146,6 @@ module.exports = coroutiner class RequestHandler
 			@res.setHeader 'content-length', length or 0
 		
 		stream.pipe @res
-		
-		#@res.end()
-		#@res.end @body, @encoding
 
 	compress: ->
 		acceptEncoding = @req.headers['accept-encoding'] or ''

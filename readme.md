@@ -83,7 +83,6 @@ lance = new Lance {
 }
 
 # Routes can be defined after instantiation, outside of the config, too
-
 lance.router.get '/:api(a|b|c|d)', (o) ->
 	###
 	`o` is a special options object containing request information in a pre-parsed manner. `o` is passed to all route requests in place of `req` and `res`.
@@ -152,12 +151,118 @@ The new directory structure:
 ###
 ```
 
-### Templating explained
+### Requests
 
+Requests from a http server normally use `response` and `request` parameters. Lance supplies an object as outlined below:
+```coffee
+###
+	Assuming you visited:
+	GET http://yourdomain.com/b?test.a=1
+###
+lance.router.get '/:api(a|b|c|d)', 'aRouteName', (o) ->
+
+	# HTTP request object
+	o.req
+	
+	# HTTP response object
+	o.res
+	
+	# Response HTTP code
+	o.code is 200
+	
+	# Response headers
+	o.headers is { 'content-type': 'text/html; charset=utf-8' }
+	
+	# Fallback body to respond with if not template is used
+	o.body is ''
+	
+	# Sent as JSON for JSON responses
+	o.json is {}
+	
+	# Relative or absolute path to a template
+	o.template.view is ''
+	
+	# Local variable for the template
+	o.template.data is {}
+	
+	# Optional lance.Templater instance
+	o.template.templater is o.lance.templater
+	
+	# Redirects to this as a path if set
+	o.redirect is ''
+	
+	# Used as a GET response query if redirecting
+	o.redirectQuery is {}
+	
+	# Parsed query, whether it be GET, POST etc.
+	o.query is {
+		test: {
+			a: '1'
+		}
+	}
+	
+	# Any files
+	o.files is {
+		# Example file
+		'exampleFile': {
+			field      : 'exampleFile'
+			filename   : 'file.txt'
+			encoding   : 'utf8'
+			mimetype   : 'text/plain'
+			ext        : 'txt'
+			
+			# Temporary file path, saved to the OS's temp directory
+			# Will be auto deleted after a timer
+			file       : tempFilePath
+			
+			# Call this to delete the temporary file
+			delete     : [Function]
+			truncated  : false
+		}
+	}
+	
+	o.method is 'GET'
+	o.route is {
+		path     : { api: 'b' }
+		splats   : []
+		name     : 'aRouteName'
+		callback : [ThisFunction]
+		pattern  : '/:api(a|b|c|d)'
+		regex    : /./ # Final regex from pattern
+	}
+	
+	o.path is o.route.path
+	o.splats is o.route.splats
+	o.cookies is new require('cookies')( o.req, o.res )
+	
+	# These properties above are also passed into a template, accessable under the "o" property
+	
+	template = { view: './someTemplate', data: { woo: 1 } }
+	template is o.template
+	
+	o.serve template
+	o.serve()
+	###
+		When `o.serve` is called without parameters it will execute this logic:
+		
+		if o.redirect
+			o.serveRedirect( o.redirect, o.redirectQuery )
+		else
+			if o.template.view
+				o.serveTemplate()
+			else
+				o.serveJson()
+	###
+
+
+```
+
+### Templating
 You can specify your own templater middleware. If none are specified, then Lance will default to checking whether `ect` is installed and will use that. 
 
 ```coffee
 
+# Uses Jade
 new Lance {
 	templater:
 		templater:
@@ -165,14 +270,23 @@ new Lance {
 			engine: require 'jade'
 			options: {} # Supplied to the engine on instantiation
 }
+
+# Uses ECT.js if `ect` is installed
+new Lance {
+	templater:
+		templater: {}
+}
+
 ```
 
-### Optional modules
 
+
+### Optional modules
 For these features to become avaliable, simply make sure they're installed.
 - `browserify` for bundling coffee/js
 	+ `coffee-reactify` for embedding JSX into Coffee
 	+ `coffeeify` only normal coffeescript
+- `ect` fallback templater
 - `stylus` 
 - `coffee-script`
 - `uglify-js` for js compression
