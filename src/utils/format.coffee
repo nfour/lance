@@ -1,56 +1,6 @@
-{ typeOf } = require 'lutils/typeOf'
+typeOf = require 'lutils/typeOf'
 
 module.exports = format =
-	###
-		Format a string to be a url-friendly slug
-
-		@param str {String} This "is" some text!
-		@return {String} str this-is-some-text
-	###
-	slugify: (str) ->
-		( decodeURIComponent str.toString 'utf8' )
-			.toLowerCase()
-			.replace /[^a-z0-9-]+/g, '-'
-			.replace /^[\s\-]+|[\s\-]+$/g, ''
-			
-	###
-		Format a space or hyphen delimited string to camelCase
-
-		@param str {String} some words here
-		@return {String} someWordsHere
-	###
-	camelCase: (str) ->
-		( format.slugify str )
-			.replace /([^a-z0-9]+)([a-z0-9])/ig, (a, b, c) -> c.toUpperCase()
-			.replace /([0-9]+)([a-zA-Z])/g, (a, b, c) -> c.toUpperCase()
-			.replace /([0-9]+)([a-zA-Z])/g, (a, b, c) -> b + c.toUpperCase()
-
-	###
-		Iterates over an Object or Array
-		calling JSON.stringify on any child Object or Arrays.
-		Not recursive.
-		
-		@param obj {mixed}
-		@param jsonArgs... Passed to JSON.stringify
-		@return obj
-	###
-	jsonify: (obj, jsonArgs...) ->
-		for key, val of obj
-			switch typeOf val
-				when 'object', 'array'
-					obj[key] = JSON.stringify val, jsonArgs...
-
-		return obj
-	
-	###
-		Escapes all regexp characters in a string.
-		
-		@param str {String}
-		@return str
-	###
-	escapeRegExp: (str) ->
-		str.replace /[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&"
-	
 	###
 		Change a file extension
 		
@@ -102,7 +52,7 @@ module.exports = format =
 		@param str {String} This "is" some text!
 		@return {String} str this-is-some-text
 	###
-	slugify: (str) ->
+	slugify: (str = '') ->
 		( decodeURIComponent str.toString 'utf8' )
 			.toLowerCase()
 			.replace /[^a-z0-9-]+/g, '-'
@@ -145,3 +95,5 @@ module.exports = format =
 	###
 	escapeRegExp: (str) ->
 		str.replace /[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&"
+		
+	isAbsolutePath: (filePath) -> /^(\/|\w:)/.test filePath

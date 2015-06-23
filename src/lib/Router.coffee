@@ -1,7 +1,8 @@
+Emitter = require('events').EventEmitter
 
 { clone, merge, typeOf } = require '../utils'
 
-module.exports = class Router
+module.exports = class Router extends Emitter
 	constructor: (newCfg, @lance) ->
 		@cfg = clone require('../config').router
 
@@ -23,7 +24,7 @@ module.exports = class Router
 			@routes[ method ]	= []
 			@indexes[ method ]	= {}
 
-	methods: [ 'get', 'post', 'head', 'put', 'delete', 'trace', 'connect', 'options' ]
+	methods: [ 'get', 'post', 'head', 'put', 'delete', 'trace', 'connect', 'options', 'patch' ]
 
 	# adds get() post() HEAD() etc. shortcut functions to the prototype
 	for method in @::methods then do (method) =>
@@ -60,16 +61,21 @@ module.exports = class Router
 		@routes[method].push route
 
 		@namedRoutes[ name or pattern ] = route
+		
+		@emit 'route', route
 
 		return route
 
 	route: (method, patterns, name = '', callback = ->) ->
+		if typeOf.Array args = method
+			return @[ args[0] ]? args[1..]...
+			
 		return false if not patterns or not method
 
 		method = method.toLowerCase()
 
 		if method not of @routes
-			@lance.emit 'error', new Error "`#{method}` method is unsupported/invalid"
+			@lance.emit 'err', new Error "`#{method}` method is unsupported/invalid"
 			return false
 
 		if returnFirst = typeOf.String patterns
@@ -86,18 +92,25 @@ module.exports = class Router
 
 	match: (urlPath = '', method = 'get', skipTo = 0) ->
 		if not urlPath
-			@lance.emit 'error', new Error "`#{urlPath}` urlPath is invalid", 'Lance.Router.match'
+			@lance.emit 'err', new Error "`#{urlPath}` urlPath is invalid", 'Lance.Router.match'
 			return @defaultResult
 
 		method = method.toLowerCase()
 
 		if @routes[ method ] is undefined
-			@lance.emit 'error', new Error "`#{method}` method is unsupported/invalid", 'Lance.Router.match'
+			@lance.emit 'err', new Error "`#{method}` method is unsupported/invalid", 'Lance.Router.match'
 			return @defaultResult
+			
+		@emit 'matching', urlPath, method, skipTo
 
 		indexPath = "#{skipTo}:#{urlPath}"
 
 		# if the path has been routed before and is thus indexed we can skip processing
+		###
+			TODO: make this on by default and more robust:
+			It needs to first contain all matching steps in a route, not just the endpoint.
+			The result should only count "o.next()" calls though, although it may already do that.
+		###
 		if @cfg.cache and @indexes[ method ][ indexPath ] isnt undefined
 			return @indexes[ method ][ indexPath ]
 		
@@ -135,6 +148,8 @@ module.exports = class Router
 				pattern		: route.pattern
 				regex		: route.regex
 			}
+			
+			@emit 'matched', result
 
 			# index the route
 			if @cfg.cache

@@ -1,8 +1,9 @@
-#
-# Extended lutils
-#
+Promise = require 'bluebird'
 
 { merge, clone, typeOf } = utils = require 'lutils'
+
+coroutiner = new require('coroutiner').Coroutiner { prototype: true }
+coroutiner.transformer = Promise.coroutine
 
 ###
 	Clone lutils then extend the new object
@@ -11,8 +12,9 @@ module.exports = utils = merge {
 	format		: require './utils/format'
 	prettyError	: require './utils/prettyError'
 	exploreDir	: require './utils/exploreDir'
-	coroutiner	: new require('coroutiner').Coroutiner { prototype: true }
+	coroutiner	: coroutiner
 }, utils
+
 
 
 #

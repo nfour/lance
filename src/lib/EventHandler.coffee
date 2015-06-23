@@ -12,9 +12,8 @@ module.exports = class EventHandler
 		# Logging
 		#
 		
-		if cfg.errors
-			emitter.on 'error', (err, scope = '', reverse) ->
-				console.error prettyError err, scope, reverse
+		emitter.on 'err', (err, scope = '', reverse) ->
+			console.error prettyError err, scope, reverse
 
 		if cfg.requests
 			emitter.on 'request', (o) ->

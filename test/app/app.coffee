@@ -1,4 +1,5 @@
 Lance = require '../../lib/Lance'
+Promise = require 'bluebird'
 
 lance = new Lance {
 	server:
@@ -8,7 +9,11 @@ lance = new Lance {
 	root	: __dirname
 	
 	routes: [
-		[ "all", "*", (o) ->
+		[ "get", "/badTemplate", Promise.coroutine (o) ->
+			o.serve { view: 'indexaaaaaa' }
+			yield return
+		]
+		[ "get", "/", (o) ->
 			o.serve { view: 'index' }
 		]
 	]
@@ -41,8 +46,11 @@ lance = new Lance {
 
 }
 
+	
 lance.on 'request.unparsed', -> console.log 'req'
 
 lance.initialize()
 
-
+lance.router.get '/badTemplate2', Promise.coroutine (o) ->
+	o.serve { view: 'not real' }
+	yield return

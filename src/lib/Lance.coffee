@@ -7,7 +7,7 @@ os			= require 'os'
 http		= require 'http'
 require 'colors'
 
-{ clone, merge, typeOf, coroutiner } = utils = require '../utils'
+{ clone, merge, typeOf, format, coroutiner } = utils = require '../utils'
 
 module.exports = coroutiner class Lance extends Emitter
 	data	: data =
@@ -31,9 +31,9 @@ module.exports = coroutiner class Lance extends Emitter
 		
 		# Captures errors ultimately uncaught through promises
 		if handler = @cfg.catchUncaught or @cfg.catchUncaughtPromises
-			handler = if typeOf.Function handler then handler else @onPossiblyUnhandledRejection
+			handler = @onPossiblyUnhandledRejection if not typeOf.Function handler
 			
-			@cfg.Promise.onPossiblyUnhandledRejection handler if @cfg.Promise
+			@cfg.Promise?.onPossiblyUnhandledRejection handler
 			Promise.onPossiblyUnhandledRejection handler
 
 		#
@@ -58,7 +58,7 @@ module.exports = coroutiner class Lance extends Emitter
 			else if @cfg.templater.saveTo
 				@paths.static = @cfg.templater.saveTo
 				
-			if @paths.static and not @templater.file.isAbsolutePath @paths.static
+			if @paths.static and not format.isAbsolutePath @paths.static
 				@paths.static = path.join @paths.root, @paths.static
 		
 		@router = new @Router @cfg.router, this
@@ -69,24 +69,23 @@ module.exports = coroutiner class Lance extends Emitter
 			@staticServer = Lactate.dir @paths.static, {}
 			console.log '~ server'.grey, 'serving static'.green
 
-			@router.all ['/static/*', '/:file(favicon.ico|robots.txt)'], 'static', (o) =>
+			@router.get ['/static/*', '/:file(favicon.ico|robots.txt)'], 'static', (o) =>
 				@staticServer.serve ( o.path.file or o.splats.join '.' ), o.req, o.res
 
 		if @cfg.routes?.length
-			for route in @cfg.routes
-				@router[ route[0] ]? route[1..]...
+			@router.route route for route in @cfg.routes
 		
 		@cfg.compress = clone require('../config').server.compress
 		
 		if typeOf.Object @cfg.server.compress
 			@cfg.compress = @cfg.server.compress
-				
+	
 	initialize: ->
 		@templater.initialize().then =>
 			@start().then()
 		
 	onPossiblyUnhandledRejection: (err) =>
-		@emit 'error', err, 'Promise.onPossiblyUnhandledRejection'
+		@emit 'err', err, 'Promise.onPossiblyUnhandledRejection'
 
 	createServer: (requestCallback) ->
 		@requestCallback = requestCallback or ->

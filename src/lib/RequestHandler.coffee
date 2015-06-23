@@ -23,55 +23,42 @@ module.exports = coroutiner class RequestHandler
 		@redirect		= ''
 		@redirectQuery	= {}
 		@query			= {}
-
+		
+		@serve.redirect	= @serveRedirect
+		@serve.template	= @serveTemplate
+		@serve.json		= @serveJson
+		@serve.code		= @serveHttpCode
+				
 		@lance.emit 'request.unparsed', this
 
-	parse: ->
-		@lance.emit 'request.parse', this
-
-		yield @parseRequest()
-
-		@lance.emit 'request', this
-		
-		if @route.callback
-			@route.callback.apply @lance, [ this ]
-		else
-			@lance.requestCallback.apply @lance, [ this ]
-
-		yield return this
-
-	###
-		Standardizes the serving of templates, json etc. 
-	###
-	serve: (template) ->
+	serve: (template) =>
 		merge @template, template if template
 		
 		try
 			@lance.emit 'serve', this
 
 			if @redirect
-				@serveRedirect @redirect, @redirectQuery or {}
+				@serve.redirect()
 			else
 				if @template.view
-					@serveTemplate()
+					@serve.template()
 				else
-					@serveJson()
+					@serve.json()
 		catch err
-			@lance.emit 'error', err
-			@serveHttpCode 500
-
-		yield return
-
-	serveTemplate: (view = @template.view, data = @template.data) ->
+			@lance.emit 'err', err
+			@serve.code 500
+	
+	serveTemplate: (view = @template.view, data = @template.data) =>
 		try
 			@lance.emit 'serveTemplate', this
+			@lance.emit 'serve.template', this
 
 			if view
 				data = merge {
 					@query
 					o: {
 						@time, @code, @headers, @body, @encoding, @json, @template, @redirect
-						@redirectQuery, @query, @method, @route, @routes, @path, @splats, @cookies
+						@redirectQuery, @query, @method, @route, @path, @splats, @cookies
 						@files, @session
 					}
 				}, data
@@ -83,20 +70,22 @@ module.exports = coroutiner class RequestHandler
 			yield return @respond()
 
 		catch err
-			@lance.emit 'error', err
-			@serveHttpCode 500
+			@lance.emit 'err', err
+			@serve.code 500
 
 		yield return
 
-	serveJson: (json) ->
+	serveJson: (json) =>
 		@lance.emit 'serveJson', this
+		@lance.emit 'serve.json', this
 
 		@res.statusCode = @code
 		@res.setHeader 'content-type', 'application/json'
 		@res.end JSON.stringify json or @json
 
-	serveRedirect: (path = @redirect, query = @redirectQuery) ->
+	serveRedirect: (path = @redirect, query = @redirectQuery) =>
 		@lance.emit 'serveRedirect', this
+		@lance.emit 'serve.redirect', this
 
 		if hash = path.match( /(#[\w\d_-]+)/i )?[1]
 			path = path.replace hash, ''
@@ -111,8 +100,9 @@ module.exports = coroutiner class RequestHandler
 		@res.setHeader 'location', path
 		@res.end()
 
-	serveHttpCode: (code = @code, body = '', headers = { 'content-type': 'text/plain; charset=utf-8' }) ->
+	serveHttpCode: (code = @code, body = '', headers = { 'content-type': 'text/plain; charset=utf-8' }) =>
 		@lance.emit 'serveHttpCode', this
+		@lance.emit 'serve.code', this
 
 		@res.statusCode = code
 		@res.setHeader key, val for key, val of headers
@@ -122,6 +112,20 @@ module.exports = coroutiner class RequestHandler
 		else
 			title = @lance.data.httpcodes[ code.toString() ] or ''
 			@res.end "#{code} #{title}"
+			
+	parse: ->
+		@lance.emit 'request.parse', this
+
+		yield @parseRequest()
+
+		@lance.emit 'request', this
+		
+		if @route.callback
+			@route.callback.apply @lance, [ this ]
+		else
+			@lance.requestCallback.apply @lance, [ this ]
+
+		yield return this
 
 	respond: ->
 		@lance.emit 'respond', this
@@ -296,7 +300,6 @@ module.exports = coroutiner class RequestHandler
 		@route		= @lance.router.match url.pathname, @method
 		@route.url	= url
 
-		@routes		= @lance.router.namedRoutes
 		@path		= @route.path
 		@splats		= @route.splats
 

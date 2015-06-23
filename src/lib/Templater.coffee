@@ -202,7 +202,7 @@ module.exports = Templater = ->
 						resolve results
 
 			promise.catch (err) =>
-				@lance.emit 'error', err
+				@lance.emit 'err', err
 
 		watchDependencies: (dependencies, fileDir, callback) =>
 			listeners = @stylus.listeners[ fileDir ] or []
@@ -438,7 +438,7 @@ module.exports = Templater = ->
 				try
 					@bundle.render.toJs.apply this, args
 				catch err
-					@lance.emit 'error', err
+					@lance.emit 'err', err
 
 		@lance.emit 'templater.bundle.render', destination
 
@@ -579,10 +579,10 @@ module.exports = Templater = ->
 		
 		root = @file.resolveToRoot root or @cfg.root
 
-		return if @file.isAbsolutePath dir then dir else path.join root, dir
+		return if format.isAbsolutePath dir then dir else path.join root, dir
 
 	@file.resolveToRoot = (dir) =>
-		return if @file.isAbsolutePath dir then dir else path.join @cfg.root, dir
+		return if format.isAbsolutePath dir then dir else path.join @cfg.root, dir
 
 	@file.resolveModel = (fileDir) =>
 		return switch
@@ -665,8 +665,6 @@ module.exports = Templater = ->
 	#
 	
 	@file.exists = (fileDir) => new Promise (resolve) -> fs.exists fileDir, resolve
-	
-	@file.isAbsolutePath = (filePath = '') => /^(\/|\w:)/.test filePath
 	
 	@file.checkExtension = (filePath, ext) =>
 		return false if not filePath or typeof filePath isnt 'string' or not ext

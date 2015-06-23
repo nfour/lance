@@ -337,6 +337,15 @@ Cloned via the github repo, tests are manual in nature at the moment. Due to the
 
 All dependencies have unit tests.
 
+## Upgrading from 1.x.x
+- Replacements
+	+ `clone.merge.hard` to `clone`
+	+ `clone.merge` to `clone`
+	+ `slugify` to `format.slugify`
+- Removals
+	+ `toArray`
+	+ `helpers.promisify` `helpers.*`
+
 ```
        __                     
       / /___ _____  ________  

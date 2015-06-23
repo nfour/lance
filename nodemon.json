@@ -12,5 +12,5 @@
 	,	"test/*"
 	]
 ,	"ext" : "js coffee json"
-,	"exec": "cake build && coffee"
+,	"exec": "cake build && iojs"
 }
