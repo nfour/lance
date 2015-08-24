@@ -1,12 +1,7 @@
 {
 	"name"				: "lance"
 ,	"description"		: "The alpha-strike framework"
-,	"version"			: "2.6.6"
-,	"author"			: { "name": "nfour" }
-,	"repository"		: {
-		"type": "git",
-		"url": "https://github.com/nfour/lance"
-	}
+,	"version"			: "2.10.10"
 
 ,	"dependencies": {
 		"bluebird"		: "^2.9.0"
@@ -21,24 +16,29 @@
 	,	"transposer"	: "0.3.x"
 	,	"coroutiner"	: "^0.2.6"
 	,	"lutils"		: ">= 0.2.11"
-
 	}
 	
 ,	"devDependencies": {
 		"coffee-script"		: "^1.9.2"
-	,	"coffee-reactify"	: "3.0.x"
+	,	"coffeeify"			: "1.1.x"
 	,	"browserify"		: "^10.0.x"
 	,	"stylus"			: "0.51.x"
 	,	"uglify-js"			: "2.4.x"
 	,	"lactate"			: "0.13.x"
 	,	"ect"				: "nfour/ect"
 	,	"jade"				: "*"
+	,	"usage"				: "*"
 	}
 	
-,	"scripts": {
+,	"main"		: "./lib/Lance"
+,	"scripts"	: {
 		"build"		: "cake build"
 	,	"publicate"	: "npm run build && npm publish"
 	}
 
-,	"main": "./lib/Lance"
+,	"author"		: { "name": "nfour" }
+,	"repository"	: {
+		"type": "git",
+		"url": "https://github.com/nfour/lance"
+	}
 }

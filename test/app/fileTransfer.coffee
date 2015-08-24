@@ -1,13 +1,10 @@
 Lance	= require '../../lib/Lance'
 fs		= require 'fs'
+config	= require './config'
 
-lance = new Lance {
-	server:
-		port: 1337
-		static	: './static'
-		
-	root	: __dirname
-	
+{ merge } = require 'lutils'
+
+lance = new Lance merge config, {
 	routes: [
 		[ "all", "*", (o) ->
 			data = {}
@@ -23,31 +20,10 @@ lance = new Lance {
 			o.serve { view: 'fileTransfer', data }
 		]
 	]
-	
-	templater:
-		findIn	: './views'
-		saveTo	: './static'
-		
-		debug:
-			files: true
-			render: true
-			
-		bundle:
-			"style.css"	: "style.styl"
-			"app.js"	: "client.coffee"
-		
-		#templater:
-		#	ext		: '.jade'
-		#	engine	: require 'jade'
-		
-		templater:
-			options:
-				cache	: true
-				watch	: true
-				open	: '<<'
-				close	: '>>'
+
 
 }
+
 
 lance.on 'request.unparsed', -> console.log 'req'
 

@@ -113,13 +113,18 @@ module.exports =
 		browserify:
 			extensions	: [ '.js', '.coffee', '.cjsx' ]
 			debug		: false # Source maps
+			
+			###
+				Allows transforms to be specified as an array of arrays of arguements to the Browserify().transform function
+				eg. transform: [ [ require('coffeeify'), { global: true } ] ]
+			###
+			transform	: null
 
 		###
 			Fallback paths for the below engines
 		###
 		saveTo: null
 		findIn: null
-		
 		
 		#
 		#	ENGINES
@@ -146,6 +151,7 @@ module.exports =
 				close	: '?>'
 			
 		stylus:
+			disabled: false
 			ext		: '.styl'
 			engine	: null
 			saveTo	: null
@@ -154,8 +160,10 @@ module.exports =
 			inherit	: true # Inherits unset options from `css`
 			options	:
 				'include css': true # Allows `@import 'some.css'` to concat
+				cache: false # Workaround for imports
 		
 		coffee:
+			disabled: false
 			ext		: '.coffee'
 			engine	: null
 			saveTo	: null
@@ -165,6 +173,7 @@ module.exports =
 			options	: {}
 			
 		css:
+			disabled: false
 			ext		: '.css'
 			saveTo	: null
 			findIn	: null
@@ -172,6 +181,7 @@ module.exports =
 			inherit	: true # Inherits unset options from `stylus`
 
 		js:
+			disabled: false
 			ext		: '.js'
 			saveTo	: null
 			findIn	: null
@@ -180,6 +190,7 @@ module.exports =
 
 		# Copy over any whitelisted file to the saveTo directory
 		assets:
+			disabled: false
 			saveTo	: null
 			findIn	: null
 			
@@ -192,11 +203,26 @@ module.exports =
 			|	woff|eot|ttf|svg|pdf
 			)$ ///i
 
-
+			###
+				Any folder/file with this prefix is ignored
+			###
+			ignorePrefix: ''
+		
 		#
 		#	ADVANCED OPTIONS
 		#
 		
+		###
+			Whether Stylus/Css/Js/CoffeeScript files and their bundled
+			dependencies are watche for changes to proc a recompile
+		###
+		watch: true
+		
+		###
+			A debugger, for toggling functionality to diagnose issues
+		###
+		debugging:
+			fileWriting: true
 		
 		###
 			Causes asset files to maintain their directory structure on render.
