@@ -293,7 +293,7 @@ For these features to become avaliable, simply make sure they're installed.
 - `lactate` for static file serving
 
 #### Stylus
-Stylus is compulsary if you're going to bundle css assets; because Stylus can exist as pure css with the benefit of the `@require()` and `@import` bundling syntax. Any plain CSS file is concatenated, it is not resolved to an `@import`.
+Stylus is compulsory if you're going to bundle css assets; because Stylus can exist as pure css with the benefit of the `@require()` and `@import` bundling syntax. Any plain CSS file is concatenated, it is not resolved to an `@import`.
 
 ### Static assets
 Lance handles these mostly automatically:
