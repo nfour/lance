@@ -5,6 +5,11 @@ cluster			= require 'cluster'
 mkdirp			= Promise.promisify require 'mkdirp'
 watch			= require 'watch'
 
+try Browserify		= require 'browserify'
+try UglifyJs		= require 'uglify-js'
+try CoffeeReactify	= require 'coffee-reactify'
+try Coffeeify		= require 'coffeeify'
+
 { clone, merge, typeOf, format, coroutiner, exploreDir } = require '../utils'
 
 module.exports = Templater = ->
@@ -42,11 +47,18 @@ module.exports = Templater = ->
 
 		try coffee.engine	= coffee.engine or require 'coffee-script'
 		try stylus.engine	= stylus.engine or require 'stylus'
-		try @Browserify		= require 'browserify'
-		try @CoffeeReactify	= require 'coffee-reactify'
-		try @Coffeeify		= require 'coffeeify'
-		try @UglifyJs		= require 'uglify-js'
+
 		
+		if Browserify and not @cfg.browserify.transform?.length
+			baseTransforms = []
+			if CoffeeReactify?
+				baseTransforms.push [ CoffeeReactify, { global: true } ] 
+			else if Coffeeify?
+				baseTransforms.push [ Coffeeify, { global: true } ]
+			
+			@cfg.browserify.transform = baseTransforms if baseTransforms.length
+
+			
 		css.match		= css.ext if not css.match
 		js.match		= js.ext if not js.match
 		stylus.match	= stylus.ext if not stylus.match
@@ -155,25 +167,28 @@ module.exports = Templater = ->
 			
 	@stylus =
 		render: (fileDir, destination) =>
+			return Promise.resolve() if @stylus.disabled
+			
 			fileDir = @file.resolve fileDir, @stylus.findIn
 
 			@lance.emit 'templater.render.stylus', fileDir
 
 			file = yield @file.read fileDir
 		
+			if not @stylus.engine
+				throw new Error "Stylus is not installed"
+			
+			engine = @stylus.engine file, @stylus.options
+
+			engine.set 'paths', [
+				path.dirname fileDir
+				@file.resolveToRoot @stylus.findIn
+			]
+			engine.set 'filename', fileDir
+
+			dependencies = engine.deps()
+
 			promise = new Promise (resolve, reject) =>
-				if not @stylus.engine
-					return reject new Error "Stylus is not installed"
-				
-				try
-					engine = @stylus.engine file, @stylus.options
-
-					engine.set 'paths', [ path.dirname fileDir ]
-					engine.set 'filename', fileDir
-
-					dependencies = engine.deps()
-				catch err then return reject err
-
 				engine.render (err, rendered = '') =>
 					return reject err if err
 					return resolve rendered if not rendered
@@ -190,7 +205,7 @@ module.exports = Templater = ->
 							saveTo	: @stylus.saveTo
 						}
 
-						if dependencies
+						if dependencies and @cfg.watch
 							@stylus.watchDependencies dependencies, fileDir, =>
 								try
 									@stylus.render fileDir, destination
@@ -221,6 +236,8 @@ module.exports = Templater = ->
 
 	@coffee =
 		render: (fileDir, destination) =>
+			return null if @coffee.disabled
+			
 			fileDir = @file.resolve fileDir, @coffee.findIn
 
 			@lance.emit 'templater.render.coffee', fileDir
@@ -240,13 +257,15 @@ module.exports = Templater = ->
 
 			if @coffee.minify
 				try 
-					if result = @UglifyJs.minify rendered, { fromString: true, mangle: false }
+					if UglifyJs? and result = UglifyJs.minify rendered, { fromString: true, mangle: false }
 						rendered = result.code
 
-			@file.write newFileDir, rendered
+			yield return @file.write newFileDir, rendered
 
 	@js =
 		render: (fileDir, destination) =>
+			return null if @js.disabled
+			
 			fileDir = @file.resolve fileDir, @js.findIn
 
 			@lance.emit 'templater.render.js', fileDir
@@ -257,13 +276,15 @@ module.exports = Templater = ->
 
 			if @js.minify
 				try
-					if result = @UglifyJs.minify rendered, { fromString: true, mangle: false }
+					if UglifyJs? and result = UglifyJs.minify rendered, { fromString: true, mangle: false }
 						rendered = result.code
 
-			@file.write newFileDir, rendered
+			yield return @file.write newFileDir, rendered
 
 	@css =
 		render: (fileDir, destination) =>
+			return null if @css.disabled
+			
 			fileDir = @file.resolve fileDir, @css.findIn
 
 			@lance.emit 'templater.render.css', fileDir
@@ -275,11 +296,13 @@ module.exports = Templater = ->
 			if @css.minify
 				file = format.minifyCss file
 
-			@file.write newFileDir, file
+			yield return @file.write newFileDir, file
 
 	@assets =
 		watching: {}
 		render: (fileDir, destination) =>
+			return null if @assets.disabled
+			
 			fileDir = @file.resolve fileDir, @assets.findIn
 
 			@lance.emit 'templater.render.assets', fileDir
@@ -290,7 +313,7 @@ module.exports = Templater = ->
 			newFileDir = @file.createSaveToPath destination or fileDir, @assets
 			readStream = fs.createReadStream fileDir
 
-			return @file.writeStream readStream, newFileDir
+			yield return @file.writeStream readStream, newFileDir
 
 		syncDirectory: (root = @assets.findIn) =>
 			root = @file.resolveToRoot root
@@ -305,36 +328,38 @@ module.exports = Templater = ->
 			monitorDirectory = (filePath) =>
 				return null if @assets.watching[ filePath ]
 				@assets.watching[ filePath ] = true
-
+				
 				watch.createMonitor filePath, o, (monitor) =>
 					for dir, file of monitor.files
 						if file.isFile()
 							await.push @assets.render dir
 
-					monitor.on 'created', (fileDir, stats) =>
-						@lance.emit 'templater.watch.created', fileDir, stats
-						@lance.emit "templater.watch.created.#{fileDir}", fileDir, stats
+					if @cfg.watch
+						monitor.on 'created', (fileDir, stats) =>
+							@lance.emit 'templater.watch.created', fileDir, stats
+							@lance.emit "templater.watch.created.#{fileDir}", fileDir, stats
 
-						if stats.isFile() and @assets.matchFn fileDir
+							if stats.isFile() and @assets.matchFn fileDir
+								@assets.render fileDir
+							else if stats.isDirectory()
+								@assets.syncDirectory fileDir
+
+						monitor.on 'changed', (fileDir) =>
+							@lance.emit 'templater.watch.change', fileDir
+							@lance.emit "templater.watch.change.#{fileDir}", fileDir
+
 							@assets.render fileDir
-						else if stats.isDirectory()
-							@assets.syncDirectory fileDir
 
-					monitor.on 'changed', (fileDir) =>
-						@lance.emit 'templater.watch.change', fileDir
-						@lance.emit "templater.watch.change.#{fileDir}", fileDir
-
-						@assets.render fileDir
-
-					monitor.on 'removed', (fileDir) =>
-						@lance.emit 'templater.watch.removed', fileDir
-						@lance.emit "templater.watch.removed.#{fileDir}", fileDir
+						monitor.on 'removed', (fileDir) =>
+							@lance.emit 'templater.watch.removed', fileDir
+							@lance.emit "templater.watch.removed.#{fileDir}", fileDir
 
 			monitorDirectory root
 			
 			yield exploreDir root, {
 				depth		: @cfg.depth or 8
 				directory	: monitorDirectory
+				ignorePrefix: @assets.ignorePrefix
 			}
 
 			return yield Promise.all await
@@ -423,31 +448,33 @@ module.exports = Templater = ->
 
 		files = [ files ] if not typeOf.Array files
 
-		for fileDir, index in files
-			model			= @file.resolveModel fileDir
-			files[index]	= @file.resolve fileDir, model.findIn
+		for fileDir, index in files by -1
+			model = @file.resolveModel fileDir
+			
+			if model.disabled
+				files.splice index, 1
+				continue
+				
+			files[index] = @file.resolve fileDir, model.findIn
+		
+		if not files.length
+			return null
 
-		if not @Browserify
+		if not Browserify?
 			throw new Error 'Browserify is not installed'
 		
-		b = @Browserify files, @cfg.browserify
+		b = Browserify files, @cfg.browserify
 
-		b.on 'file', (fileDir) =>
-			# TODO: consider whether "destination" needs to be absolute pathed eg. savepath
-			@bundle.watchDependencies [ fileDir ], destination, =>
-				try
-					@bundle.render.toJs.apply this, args
-				catch err
-					@lance.emit 'err', err
+		if @cfg.watch
+			b.on 'file', (fileDir) =>
+				# TODO: consider whether "destination" needs to be absolute pathed eg. savepath
+				@bundle.watchDependencies [ fileDir ], destination, =>
+					try
+						@bundle.render.toJs.apply this, args
+					catch err
+						@lance.emit 'err', err
 
 		@lance.emit 'templater.bundle.render', destination
-
-		switch
-			when @CoffeeReactify
-				b.transform @CoffeeReactify, { global: true }
-			when @Coffeeify
-				b.transform @Coffeeify, { global: true }
-
 		
 		readStream = b.bundle().on 'error', Promise.method (err) =>
 			readStream.end?()
@@ -466,16 +493,26 @@ module.exports = Templater = ->
 	@bundle.render.toCss = (fileDirs, destination) =>
 		args = arguments
 
-		@lance.emit 'templater.bundle.render', destination
-
 		if inputIsArray = typeOf.Array fileDirs
 			allDeps = []
 			engines = []
-			files	= []
-			for fileDir, index in fileDirs
-				model	= @file.resolveModel fileDir
-				fileDir	= @file.resolve fileDir, model.findIn
+			renders	= []
+			
+			for fileDir, index in fileDirs by -1
+				model = @file.resolveModel fileDir
+				
+				if model.disabled
+					fileDirs.splice index, 1
+					continue
+					
+				fileDirs[index] = @file.resolve fileDir, model.findIn
+			
+			if not fileDirs.length
+				return null
+			
+			@lance.emit 'templater.bundle.render', destination
 
+			for fileDir, index in fileDirs
 				[ rendered, dependencies, engine ] = yield @stylus.render fileDir
 
 				allDeps.push fileDir
@@ -483,27 +520,36 @@ module.exports = Templater = ->
 
 				engines.push engine
 
-				files.push rendered
+				renders.push rendered
 
-			rendered = files.join '\n'
+			rendered = renders.join '\n'
 
 			if destination
-				newFileDir = @file.createSaveToPath destination or fileDir,
+				newFileDir = @file.createSaveToPath destination or fileDir, {
 					ext		: @css.ext
 					findIn	: @stylus.findIn
 					saveTo	: @stylus.saveTo
-
-				@bundle.watchDependencies allDeps, newFileDir, =>
-					try
-						@bundle.render.toCss.apply this, args
-					catch err
-						console.error err
+				}
+				
+				if @cfg.watch
+					@bundle.watchDependencies allDeps, newFileDir, =>
+						try
+							@bundle.render.toCss.apply this, args
+						catch err
+							console.error err
 
 				yield @file.write newFileDir, rendered
 
 			return [ rendered, allDeps, engines ]
 		else
-			return yield @stylus.render fileDirs, destination
+			fileDir	= fileDirs
+			model	= @file.resolveModel fileDir
+			
+			if not model.disabled
+				@lance.emit 'templater.bundle.render', destination
+				return @stylus.render fileDir, destination
+		
+		yield return
 
 	#
 	# Watch file operations
@@ -511,7 +557,7 @@ module.exports = Templater = ->
 
 
 	@watch = (fileDir, callback) =>
-		return false if not fileDir
+		return false if not fileDir or not @cfg.watch
 
 		@lance.emit 'templater.watch', fileDir
 
@@ -579,10 +625,10 @@ module.exports = Templater = ->
 		
 		root = @file.resolveToRoot root or @cfg.root
 
-		return if format.isAbsolutePath dir then dir else path.join root, dir
+		return if path.isAbsolute dir then dir else path.join root, dir
 
 	@file.resolveToRoot = (dir) =>
-		return if format.isAbsolutePath dir then dir else path.join @cfg.root, dir
+		return if path.isAbsolute dir then dir else path.join @cfg.root, dir
 
 	@file.resolveModel = (fileDir) =>
 		return switch
@@ -600,7 +646,8 @@ module.exports = Templater = ->
 		return fs.readFileAsync fileDir, encoding
 
 	@file.write = (fileDir, file) =>
-
+		return null if @cfg.debugging.fileWriting is false
+		
 		yield @file.createDirectory fileDir
 
 		result = yield fs.writeFileAsync fileDir, file
@@ -609,6 +656,7 @@ module.exports = Templater = ->
 		return result
 
 	@file.writeStream = (readStream, fileDir) =>
+		return null if @cfg.debugging.fileWriting is false
 		yield @file.createDirectory fileDir
 
 		writeStream = fs.createWriteStream fileDir

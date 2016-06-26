@@ -1,6 +1,8 @@
 path		= require 'path'
 { minify }	= require './format'
 
+lastError = 0
+
 ###
 	Prettifies error messages for the console.
 	
@@ -20,7 +22,7 @@ module.exports = (err, scope, reverse) ->
 	lines = ( err?.stack or err or '' ).toString().split '\n'
 
 	stack		= []
-	greyStack	= []
+	grayStack	= []
 	count = 0
 
 	for line in lines[1..]
@@ -79,12 +81,17 @@ module.exports = (err, scope, reverse) ->
 				stack.push str + " \t\t#{file.cyan}\n"
 		else
 			continue if count > 500
-			greyStack.push ' ' + line.grey
+			grayStack.push ' ' + line.grey
 			++count
 
 	stack.reverse() if reverse isnt false
 
-	stack = stack.concat greyStack
+	stack = stack.concat grayStack
+	
+	now = new Date()
+	stack.push " + #{ now - lastError } ms".gray
+	lastError = now
+	
 	stack.push ' ' + lines[0].red.bold + '\n'
 
 	#if scope

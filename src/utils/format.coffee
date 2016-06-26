@@ -96,4 +96,7 @@ module.exports = format =
 	escapeRegExp: (str) ->
 		str.replace /[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&"
 		
-	isAbsolutePath: (filePath) -> /^(\/|\w:)/.test filePath
+	isAbsolutePath: (filePath) ->
+		console.log 'DEPRECATED:'.yellow, 'lance.format.isAbsolutePath'
+		console.log "Use require('path').isAbsolute() instead"
+		/^(\/|\w:)/.test filePath

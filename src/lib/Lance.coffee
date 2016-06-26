@@ -12,7 +12,6 @@ require 'colors'
 module.exports = coroutiner class Lance extends Emitter
 	data	: data =
 		cfg			: require '../config'
-		httpcodes	: require '../data/httpcodes'
 		mimetypes	: require '../data/mimetypes'
 		
 	cfg		: data.cfg
@@ -58,7 +57,7 @@ module.exports = coroutiner class Lance extends Emitter
 			else if @cfg.templater.saveTo
 				@paths.static = @cfg.templater.saveTo
 				
-			if @paths.static and not format.isAbsolutePath @paths.static
+			if @paths.static and not path.isAbsolute @paths.static
 				@paths.static = path.join @paths.root, @paths.static
 		
 		@router = new @Router @cfg.router, this
@@ -92,7 +91,7 @@ module.exports = coroutiner class Lance extends Emitter
 
 		http.globalAgent.maxSockets = @cfg.server.maxSockets or 20
 		
-		@server = http.createServer (req, res) =>
+		@server = new http.Server (req, res) =>
 			new @RequestHandler( req, res, this ).parse()
 
 		@emit 'server.starting', this

@@ -110,7 +110,7 @@ module.exports = coroutiner class RequestHandler
 		if body
 			@res.end body
 		else
-			title = @lance.data.httpcodes[ code.toString() ] or ''
+			title = require('http').STATUS_CODES[ code.toString() ] or ''
 			@res.end "#{code} #{title}"
 			
 	parse: ->
